@@ -1,0 +1,9 @@
+# Ignore python cache files
+__pycache__/
+*.pyc
+
+# Don't upload the database (it creates itself anyway)
+pharmacy.db
+
+# Don't upload the virtual environment
+venv/
