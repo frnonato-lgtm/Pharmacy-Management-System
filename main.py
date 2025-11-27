@@ -8,21 +8,20 @@ from ui.login_page import LoginPage
 from ui.app_layout import AppLayout
 
 # Sub-views
-from ui.patient_views import PatientDashboard, MedicineSearch, CartView
+# NEW:
+from ui.patient import PatientDashboard, MedicineSearch, CartView, OrdersView, ProfileView
 from ui.pharmacist_views import PharmacistDashboard, PrescriptionsView
 from ui.inventory_views import InventoryDashboard, ManageStock
 from ui.billing_views import BillingDashboard, InvoicesView
-from ui.admin_views import AdminDashboard, UserManagement
-from ui.staff_views import StaffDashboard, StaffPatientSearch
+from ui.admin  import AdminDashboard, UserManagement, ReportsView, SystemLogs
 
 def main(page: ft.Page):
-    # Window setup
     page.title = "Kaputt Kommandos PMS"
     page.window_width = 1024
     page.window_height = 768
     page.window_resizable = True 
     
-    # Center the app
+    # Centers window on screen
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     
@@ -31,7 +30,6 @@ def main(page: ft.Page):
     except:
         pass 
     
-    # Set theme
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
     page.theme_mode = ft.ThemeMode.LIGHT 
 
@@ -50,11 +48,11 @@ def main(page: ft.Page):
 
         troute = page.route
 
-        # Landing
+        # Show landing page
         if troute == "/":
             page.views.append(create_view("/", [LandingPage(page)], ft.ScrollMode.AUTO))
         
-        # Login
+        # Show login page
         elif troute.startswith("/login"):
             try:
                 role_param = troute.split("/")[2]
@@ -62,7 +60,7 @@ def main(page: ft.Page):
                 role_param = "Patient"
             page.views.append(create_view(troute, [LoginPage(page, role_param)], ft.ScrollMode.AUTO))
 
-        # Dashboards (Protected)
+        # Show dashboard if logged in
         else:
             user = AppState.get_user()
             if not user:
@@ -78,16 +76,20 @@ def main(page: ft.Page):
                 elif role == "Inventory": content = InventoryDashboard()
                 elif role == "Billing": content = BillingDashboard()
                 elif role == "Admin": content = AdminDashboard()
-                elif role == "Staff": content = StaffDashboard()
                 else: content = ft.Text(f"Welcome {user['full_name']}")
-
+            #content route for patient
             elif troute == "/patient/search": content = MedicineSearch()
             elif troute == "/patient/cart": content = CartView()
+            elif troute == "/patient/orders": content = OrdersView()
+            elif troute == "/patient/profile": content = ProfileView()
+
             elif troute == "/pharmacist/prescriptions": content = PrescriptionsView()
             elif troute == "/inventory/stock": content = ManageStock()
             elif troute == "/billing/invoices": content = InvoicesView()
+            #content route for admin
             elif troute == "/admin/users": content = UserManagement()
-            elif troute == "/staff/search": content = StaffPatientSearch()
+            elif troute == "/admin/reports": content = ReportsView()
+            elif troute == "/admin/logs": content = SystemLogs()
 
             page.views.append(create_view(troute, [AppLayout(page, content)], None))
         
