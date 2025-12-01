@@ -28,7 +28,8 @@ def init_db():
             email TEXT,
             phone TEXT,
             dob TEXT,
-            address TEXT
+            address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
@@ -40,7 +41,35 @@ def init_db():
             category TEXT,
             price REAL,
             stock INTEGER,
-            expiry_date TEXT
+            expiry_date TEXT,
+            supplier TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Create prescriptions table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS prescriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            image_path TEXT,
+            status TEXT DEFAULT 'Pending',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (patient_id) REFERENCES users(id)
+        )
+    ''')
+
+    # Create invoices table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS invoices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_number TEXT UNIQUE NOT NULL,
+            patient_id INTEGER NOT NULL,
+            total_amount REAL NOT NULL,
+            status TEXT DEFAULT 'Unpaid',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (patient_id) REFERENCES users(id)
         )
     ''')
 
@@ -64,15 +93,80 @@ def init_db():
 
         # Add some sample medicines for the inventory
         meds = [
-            ('Paracetamol', 'Pain Relief', 5.00, 100, '2026-01-01'),
-            ('Amoxicillin', 'Antibiotic', 15.00, 50, '2025-12-01'),
-            ('Vitamin C', 'Supplement', 8.00, 5, '2025-06-01'),
-            ('Ibuprofen', 'Pain Relief', 7.50, 200, '2026-05-20')
+            ('Paracetamol', 'Pain Relief', 5.00, 100, '2026-01-01', 'PharmaCorp'),
+            ('Amoxicillin', 'Antibiotic', 15.00, 50, '2025-12-01', 'MediSupply'),
+            ('Vitamin C', 'Supplement', 8.00, 5, '2025-06-01', 'HealthPlus'),
+            ('Ibuprofen', 'Pain Relief', 7.50, 200, '2026-05-20', 'PharmaCorp')
         ]
-        cursor.executemany("INSERT INTO medicines (name, category, price, stock, expiry_date) VALUES (?, ?, ?, ?, ?)", meds)
+        cursor.executemany("""
+            INSERT INTO medicines (name, category, price, stock, expiry_date, supplier) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, meds)
 
     conn.commit()
     conn.close()
+
+# Upgrade existing database to add missing columns
+def upgrade_database():
+    """Add missing columns to existing tables if they don't exist."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check and add created_at to users table
+        cursor.execute("PRAGMA table_info(users)")
+        user_columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'created_at' not in user_columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            print("✓ Added created_at column to users table")
+        
+        # Check and add created_at to medicines table
+        cursor.execute("PRAGMA table_info(medicines)")
+        medicine_columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'created_at' not in medicine_columns:
+            cursor.execute("ALTER TABLE medicines ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            print("✓ Added created_at column to medicines table")
+        
+        if 'supplier' not in medicine_columns:
+            cursor.execute("ALTER TABLE medicines ADD COLUMN supplier TEXT")
+            print("✓ Added supplier column to medicines table")
+        
+        # Create prescriptions table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS prescriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                image_path TEXT,
+                status TEXT DEFAULT 'Pending',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES users(id)
+            )
+        """)
+        
+        # Create invoices table if it doesn't exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS invoices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_number TEXT UNIQUE NOT NULL,
+                patient_id INTEGER NOT NULL,
+                total_amount REAL NOT NULL,
+                status TEXT DEFAULT 'Unpaid',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES users(id)
+            )
+        """)
+        
+        conn.commit()
+        print("✓ Database upgrade completed successfully!")
+        
+    except Exception as e:
+        print(f"✗ Error upgrading database: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 # Check if username and password are correct
 def authenticate_user(username, password):
@@ -82,3 +176,9 @@ def authenticate_user(username, password):
     user = cursor.fetchone()
     conn.close()
     return user
+
+# Initialize database (call this when app starts)
+def initialize_database():
+    """Initialize and upgrade database."""
+    init_db()
+    upgrade_database()

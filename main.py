@@ -1,5 +1,6 @@
 import flet as ft
 from database import init_db
+#from database import initialize_database
 from state import AppState
 
 # Import Views

@@ -62,6 +62,7 @@ class AppLayout(ft.Row):
                     content=content_control, 
                     expand=True, 
                     padding=20,
+                    
                 )
             ],
             scroll=ft.ScrollMode.AUTO
