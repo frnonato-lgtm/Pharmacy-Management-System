@@ -30,6 +30,11 @@ def ProfileView():
             border_radius=8,
         )
     
+    def logout(e):
+        """Handle user logout."""
+        AppState.set_user(None)
+        e.page.go("/")
+    
     return ft.Column([
         # Profile header
         ft.Container(
@@ -46,7 +51,16 @@ def ProfileView():
                     ft.Text(user_data['full_name'], size=24, weight="bold"),
                     ft.Text(user_data['username'], size=14, color="outline"),
                     ft.Text(f"Role: {user_data['role']}", size=13, color="primary", weight="bold"),
-                ], spacing=5),
+                ], spacing=5, expand=True),
+                
+                # Logout button in header
+                ft.ElevatedButton(
+                    "Logout",
+                    icon=ft.Icons.LOGOUT,
+                    bgcolor="error",
+                    color="onError",
+                    on_click=logout,
+                ),
             ], spacing=20),
             padding=20,
             bgcolor="surface",
@@ -78,7 +92,7 @@ def ProfileView():
         ft.Divider(),
         ft.Container(height=10),
         
-        # Action buttons
+        # Account Actions
         ft.Text("Account Actions", size=20, weight="bold"),
         ft.Container(height=10),
         
@@ -98,4 +112,6 @@ def ProfileView():
                 icon=ft.Icons.MEDICAL_INFORMATION,
             ),
         ], spacing=10, wrap=True),
+        
+
     ], scroll=ft.ScrollMode.AUTO, spacing=0)
