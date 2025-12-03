@@ -1,0 +1,128 @@
+import flet as ft
+from services.database import init_db
+from state.app_state import AppState
+
+# Import Main Views
+from views.landing_page import LandingPage
+from views.login_page import LoginPage
+from components.app_layout import AppLayout
+
+# Import Role-Specific Views
+from views.patient.patient_dashboard import PatientDashboard
+from views.patient.medicine_search import MedicineSearch
+from views.patient.cart_view import CartView
+from views.patient.orders_view import OrdersView
+from views.patient.profile_view import ProfileView
+
+from views.admin.admin_dashboard import AdminDashboard
+from views.admin.user_management import UserManagement
+from views.admin.reports_view import ReportsView
+from views.admin.logs_view import SystemLogs
+
+from views.inventory.inventory_dashboard import InventoryDashboard
+from views.inventory.manage_stock import ManageStock
+
+from views.pharmacist.pharmacist_dashboard import PharmacistDashboard
+from views.pharmacist.prescriptions_view import PrescriptionsView
+
+from views.billing.billing_dashboard import BillingDashboard
+from views.billing.invoices_view import InvoicesView
+
+from views.staff.staff_dashboard import StaffDashboard
+from views.staff.patient_search import StaffPatientSearch
+
+def main(page: ft.Page):
+    page.title = "Kaputt Kommandos PMS"
+    page.window_width = 1024
+    page.window_height = 768
+    page.window_resizable = True 
+    
+    # Center the app
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    try: page.window_center()
+    except: pass 
+    
+    page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
+    page.theme_mode = ft.ThemeMode.LIGHT 
+
+    # Start the DB
+    init_db()
+
+    def route_change(route):
+        page.views.clear()
+        
+        # Helper to simplify view creation
+        def create_view(route_path, controls, scroll_mode=ft.ScrollMode.AUTO):
+            return ft.View(route_path, controls, padding=0, scroll=scroll_mode)
+
+        troute = page.route
+
+        # Landing
+        if troute == "/":
+            page.views.append(create_view("/", [LandingPage(page)], ft.ScrollMode.AUTO))
+        
+        # Login
+        elif troute.startswith("/login"):
+            try: role_param = troute.split("/")[2]
+            except: role_param = "Patient"
+            page.views.append(create_view(troute, [LoginPage(page, role_param)], ft.ScrollMode.AUTO))
+
+        # Dashboard / Protected Routes
+        else:
+            user = AppState.get_user()
+            if not user:
+                page.go("/")
+                return
+
+            content = ft.Text("Not Found")
+            
+            # 1. Dashboards
+            if troute == "/dashboard":
+                role = user['role']
+                if role == "Patient": content = PatientDashboard()
+                elif role == "Pharmacist": content = PharmacistDashboard()
+                elif role == "Inventory": content = InventoryDashboard()
+                elif role == "Billing": content = BillingDashboard()
+                elif role == "Admin": content = AdminDashboard()
+                elif role == "Staff": content = StaffDashboard()
+                else: content = ft.Text(f"Welcome {user['full_name']}")
+
+            # 2. Patient Views
+            elif troute == "/patient/search": content = MedicineSearch()
+            elif troute == "/patient/cart": content = CartView()
+            elif troute == "/patient/orders": content = OrdersView()
+            elif troute == "/patient/profile": content = ProfileView()
+
+            # 3. Pharmacist Views
+            elif troute == "/pharmacist/prescriptions": content = PrescriptionsView()
+
+            # 4. Inventory Views
+            elif troute == "/inventory/stock": content = ManageStock()
+
+            # 5. Billing Views
+            elif troute == "/billing/invoices": content = InvoicesView()
+
+            # 6. Admin Views
+            elif troute == "/admin/users": content = UserManagement()
+            elif troute == "/admin/reports": content = ReportsView()
+            elif troute == "/admin/logs": content = SystemLogs()
+
+            # 7. Staff Views
+            elif troute == "/staff/search": content = StaffPatientSearch()
+
+            page.views.append(create_view(troute, [AppLayout(page, content)], None))
+        
+        page.update()
+
+    def view_pop(view):
+        page.views.pop()
+        top_view = page.views[-1]
+        page.go(top_view.route)
+
+    page.on_route_change = route_change
+    page.on_view_pop = view_pop
+    page.go("/")
+
+if __name__ == "__main__":
+    ft.app(target=main)

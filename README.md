@@ -1,15 +1,15 @@
-# 🏥 Pharmacy Management System (PMS)
+# Pharmacy Management System (PMS)
 **Group 5 - Kaputt Kommandos**  
 *CCCS 106 - Application Development and Emerging Technologies*
 
-## 📖 Project Overview
+## Project Overview
 The **Kaputt Kommandos PMS** is a modern desktop application designed to streamline daily pharmacy operations. It handles user authentication, inventory tracking, prescription validation, billing, and patient management.
 
 Built using **Python** and **Flet** (Flutter for Python), the system features a responsive, material-design interface with **Dark Mode** support and **Role-Based Access Control (RBAC)**.
 
 ---
 
-## 👥 The Team
+## The Team
 | Name | Role | Responsibility |
 | :--- | :--- | :--- |
 | **Carl Renz Colico** | Product Owner / PM | Product Lead / Vision & Feature Prioritization, UI/UX & Accessibility Designer |
@@ -18,26 +18,26 @@ Built using **Python** and **Flet** (Flutter for Python), the system features a 
 
 ---
 
-## 🚀 Key Features
-*   **🔐 Role-Based Security:** Distinct dashboards and permissions for Patients, Admins, Pharmacists, Inventory Managers, Billing Clerks, and Staff.
-*   **🌗 Adaptive UI:** Fully supported **Dark Mode** and Light Mode with a cohesive Teal theme.
-*   **📦 Inventory Management:** Real-time tracking of medicine stock with visual "Low Stock" alerts.
-*   **💊 Prescription Handling:** Pharmacists can view pending prescriptions and dispense medication.
-*   **🛒 Patient Portal:** Patients can sign up, search for medicines, and view their cart.
-*   **🧾 Billing System:** Generation of invoices and sales tracking.
-*   **💾 Local Database:** Powered by **SQLite** for fast, persistent data storage without external servers.
+## Key Features
+*   **Role-Based Security:** Distinct dashboards and permissions for Patients, Admins, Pharmacists, Inventory Managers, Billing Clerks, and Staff.
+*   **Adaptive UI:** Fully supported **Dark Mode** and Light Mode with a cohesive Teal theme.
+*   **Inventory Management:** Real-time tracking of medicine stock with visual "Low Stock" alerts.
+*   **Prescription Handling:** Pharmacists can view pending prescriptions and dispense medication.
+*   **Patient Portal:** Patients can sign up, search for medicines, and view their cart.
+*   **Billing System:** Generation of invoices and sales tracking.
+*   **Local Database:** Powered by **SQLite** for fast, persistent data storage without external servers.
 
 ---
 
-## 🛠️ Tech Stack
-*   **Language:** Python 3.10+
-*   **GUI Framework:** [Flet](https://flet.dev/) (v0.25+)
+## Tech Stack
+*   **Language:** Python 3.13.5
+*   **GUI Framework:** [Flet](https://flet.dev/) (0.28.3)
 *   **Database:** SQLite3
 *   **Version Control:** Git & GitHub
 
 ---
 
-## ⚙️ Installation & Setup Guide
+## Installation & Setup Guide
 
 ### 1. Clone the Repository
 ```bash
@@ -74,7 +74,7 @@ python main.py
 
 ---
 
-## 🔑 Login Credentials (Test Accounts)
+## Login Credentials (Test Accounts)
 
 The database is pre-seeded with these accounts for testing purposes:
 
