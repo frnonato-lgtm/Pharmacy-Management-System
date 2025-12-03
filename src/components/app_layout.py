@@ -88,7 +88,10 @@ class AppLayout(ft.Row):
         elif role == "Staff":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON_SEARCH, label="Find Patient"))
             
-        dests.append(ft.NavigationRailDestination(icon=ft.Icons.LOGOUT, label="Logout"))
+        # Only show Logout in sidebar if NOT a Patient
+        if role != "Patient":
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.LOGOUT, label="Logout"))
+        
         return dests
 
     # Handle clicks on the sidebar
