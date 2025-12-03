@@ -42,7 +42,7 @@ Built using **Python** and **Flet** (Flutter for Python), the system features a 
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/frnonato-lgtm/Pharmacy-Management-System.git
-cd Pharmacy-Management-System/pharmacy_system
+cd Pharmacy-Management-System
 ```
 
 ### 2. Set up Virtual Environment
@@ -50,14 +50,14 @@ It is highly recommended to use a virtual environment to keep dependencies clean
 
 **Windows:**
 ```bash
-python -m venv venv
-.\venv\Scripts\Activate
+python -m venv .venv
+.\.venv\Scripts\Activate
 ```
 
 **Mac / Linux:**
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 ### 3. Install Dependencies
@@ -67,10 +67,11 @@ pip install -r requirements.txt
 
 ### 4. Run the Application
 ```bash
+cd src
 python main.py
 ```
 
-*Note: The ```pharmacy.db``` file will be generated automatically upon the first successful run.*
+*Note: The `pharmacy.db` file will be generated automatically upon the first successful run.*
 
 ---
 
@@ -80,12 +81,12 @@ The database is pre-seeded with these accounts for testing purposes:
 
 | **Role** | **Username** | **Password** | **Features to Test** |
 | :---     | :---         | :---         | :---                 |
-| **Patient** | ```pat``` | ```pat123``` | Search Medicine, Add to Cart |
-| **Administrator** | ```admin``` | ```admin123``` | User Management, System Overview |
-| **Pharmacist** | ```pharm``` | ```pharm123``` | Prescription Validation |
-| **Inventory Manager** | ```inv``` | ```inv123``` | Stock Management, Low Stock Alerts |
-| **Billing Clerk** | ```bill``` | ```bill123``` | Invoices, Sales Reports |
-| **Staff Member** | ```staff``` | ```staff123``` | Patient Search |
+| **Patient** | `pat` | `pat123` | Search Medicine, Add to Cart |
+| **Administrator** | `admin` | `admin123` | User Management, System Overview |
+| **Pharmacist** | `pharm` | `pharm123` | Prescription Validation |
+| **Inventory Manager** | `inv` | `inv123` | Stock Management, Low Stock Alerts |
+| **Billing Clerk** | `bill` | `bill123` | Invoices, Sales Reports |
+| **Staff Member** | `staff` | `staff123` | Patient Search |
 
 New users can also create an account using the **"Create Account"** button on the Patient Login page.
 
