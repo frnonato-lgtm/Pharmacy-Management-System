@@ -1,7 +1,10 @@
-"""Prescriptions list and management."""
+"""Prescriptions list and management with real database."""
 
 import flet as ft
+from datetime import datetime
 from services.database import get_db_connection
+from state.app_state import AppState
+from components.navigation_header import NavigationHeader
 
 def PrescriptionsView():
     """List all prescriptions with filters."""
@@ -16,6 +19,7 @@ def PrescriptionsView():
             ft.dropdown.Option("Pending"),
             ft.dropdown.Option("Approved"),
             ft.dropdown.Option("Rejected"),
+            ft.dropdown.Option("Dispensed"),
         ],
         value="All",
         width=150,
@@ -28,58 +32,60 @@ def PrescriptionsView():
         expand=True,
     )
     
-    def get_mock_prescriptions():
-        """Get mock prescriptions (replace with real DB later)."""
-        return [
-            {
-                "id": 1234,
-                "patient_name": "John Doe",
-                "patient_id": 101,
-                "doctor_name": "Dr. Smith",
-                "medicine": "Amoxicillin 500mg",
-                "dosage": "1 tablet 3x daily",
-                "duration": "7 days",
-                "status": "Pending",
-                "date": "2025-11-26 14:30",
-                "notes": "Patient has penicillin allergy - verify substitute",
-            },
-            {
-                "id": 1235,
-                "patient_name": "Jane Smith",
-                "patient_id": 102,
-                "doctor_name": "Dr. Johnson",
-                "medicine": "Paracetamol 500mg",
-                "dosage": "2 tablets every 6 hours",
-                "duration": "5 days",
-                "status": "Pending",
-                "date": "2025-11-26 13:15",
-                "notes": "",
-            },
-            {
-                "id": 1236,
-                "patient_name": "Robert Johnson",
-                "patient_id": 103,
-                "doctor_name": "Dr. Williams",
-                "medicine": "Ibuprofen 400mg",
-                "dosage": "1 tablet every 8 hours",
-                "duration": "10 days",
-                "status": "Approved",
-                "date": "2025-11-26 10:00",
-                "notes": "Approved by Dr. Chen",
-            },
-            {
-                "id": 1237,
-                "patient_name": "Emily Davis",
-                "patient_id": 104,
-                "doctor_name": "Dr. Brown",
-                "medicine": "Cetirizine 10mg",
-                "dosage": "1 tablet once daily",
-                "duration": "14 days",
-                "status": "Rejected",
-                "date": "2025-11-25 16:45",
-                "notes": "Invalid doctor signature",
-            },
-        ]
+    def get_prescriptions_from_db(status_val="All", search_query=""):
+        """Get prescriptions from database with filters."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT p.id, p.status, p.created_at, p.dosage, p.frequency, p.duration,
+                   p.notes, p.pharmacist_notes, p.reviewed_date,
+                   u.full_name as patient_name, u.id as patient_id,
+                   m.name as medicine_name
+            FROM prescriptions p
+            LEFT JOIN users u ON p.patient_id = u.id
+            LEFT JOIN medicines m ON p.medicine_id = m.id
+            WHERE 1=1
+        """
+        
+        params = []
+        
+        # Status filter
+        if status_val != "All":
+            query += " AND p.status = ?"
+            params.append(status_val)
+        
+        # Search filter
+        if search_query:
+            query += " AND (u.full_name LIKE ? OR p.id LIKE ?)"
+            params.append(f"%{search_query}%")
+            params.append(f"%{search_query}%")
+        
+        query += " ORDER BY p.created_at DESC"
+        
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        conn.close()
+        
+        # Convert to list of dicts
+        prescriptions = []
+        for row in results:
+            prescriptions.append({
+                'id': row[0],
+                'status': row[1],
+                'created_at': row[2],
+                'dosage': row[3],
+                'frequency': row[4],
+                'duration': row[5],
+                'notes': row[6],
+                'pharmacist_notes': row[7],
+                'reviewed_date': row[8],
+                'patient_name': row[9],
+                'patient_id': row[10],
+                'medicine': row[11],
+            })
+        
+        return prescriptions
     
     def create_prescription_card(rx):
         """Create prescription card."""
@@ -87,6 +93,7 @@ def PrescriptionsView():
             "Pending": "tertiary",
             "Approved": "primary",
             "Rejected": "error",
+            "Dispensed": "secondary",
         }
         
         status_color = status_colors.get(rx['status'], "outline")
@@ -105,9 +112,9 @@ def PrescriptionsView():
                             rx['status'],
                             size=12,
                             weight="bold",
-                            color=f"on{status_color.capitalize()}Container" if status_color != "outline" else "outline",
+                            color="white",
                         ),
-                        bgcolor=ft.Colors.with_opacity(0.2, status_color),
+                        bgcolor=status_color,
                         padding=ft.padding.symmetric(horizontal=12, vertical=6),
                         border_radius=15,
                     ),
@@ -118,11 +125,6 @@ def PrescriptionsView():
                 # Prescription details
                 ft.Row([
                     ft.Column([
-                        ft.Text("Prescribed by:", size=11, color="outline"),
-                        ft.Text(rx['doctor_name'], size=13, weight="bold"),
-                    ], spacing=2),
-                    ft.VerticalDivider(width=20),
-                    ft.Column([
                         ft.Text("Medicine:", size=11, color="outline"),
                         ft.Text(rx['medicine'], size=13, weight="bold"),
                     ], spacing=2),
@@ -131,13 +133,18 @@ def PrescriptionsView():
                         ft.Text("Dosage:", size=11, color="outline"),
                         ft.Text(rx['dosage'], size=13),
                     ], spacing=2),
+                    ft.VerticalDivider(width=20),
+                    ft.Column([
+                        ft.Text("Duration:", size=11, color="outline"),
+                        ft.Text(f"{rx['duration']} days", size=13),
+                    ], spacing=2),
                 ], spacing=10, wrap=True),
                 
                 ft.Container(height=5),
                 
                 ft.Row([
                     ft.Icon(ft.Icons.ACCESS_TIME, size=14, color="outline"),
-                    ft.Text(f"Submitted: {rx['date']}", size=12, color="outline"),
+                    ft.Text(f"Submitted: {rx['created_at']}", size=12, color="outline"),
                 ], spacing=5),
                 
                 # Notes if any
@@ -146,7 +153,7 @@ def PrescriptionsView():
                         ft.Icon(ft.Icons.NOTE, size=16, color="tertiary"),
                         ft.Text(rx['notes'], size=12, italic=True),
                     ], spacing=5),
-                    visible=bool(rx['notes']),
+                    visible=bool(rx.get('notes')),
                     bgcolor=ft.Colors.with_opacity(0.1, "tertiary"),
                     padding=8,
                     border_radius=5,
@@ -162,16 +169,16 @@ def PrescriptionsView():
                         on_click=lambda e, rx_id=rx['id']: e.page.go(f"/pharmacist/prescription/{rx_id}"),
                     ),
                     ft.OutlinedButton(
-                        "Approve",
+                        "Quick Approve",
                         icon=ft.Icons.CHECK_CIRCLE,
                         disabled=rx['status'] != "Pending",
-                        on_click=lambda e: approve_prescription(e, rx['id']),
+                        on_click=lambda e, rx_id=rx['id']: quick_approve(e, rx_id),
                     ),
                     ft.OutlinedButton(
-                        "Reject",
+                        "Quick Reject",
                         icon=ft.Icons.CANCEL,
                         disabled=rx['status'] != "Pending",
-                        on_click=lambda e: reject_prescription(e, rx['id']),
+                        on_click=lambda e, rx_id=rx['id']: quick_reject(e, rx_id),
                     ),
                 ], spacing=10, wrap=True),
             ], spacing=10),
@@ -181,44 +188,64 @@ def PrescriptionsView():
             bgcolor="surface",
         )
     
-    def approve_prescription(e, rx_id):
-        """Approve prescription."""
-        e.page.snack_bar = ft.SnackBar(
-            content=ft.Text(f"Prescription #{rx_id} approved!"),
-            bgcolor="primary",
-        )
-        e.page.snack_bar.open = True
-        e.page.update()
-        load_prescriptions(e)
+    def quick_approve(e, rx_id):
+        """Quick approve prescription without notes."""
+        user = AppState.get_user()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute("""
+                UPDATE prescriptions 
+                SET status = 'Approved',
+                    pharmacist_id = ?,
+                    reviewed_date = ?
+                WHERE id = ?
+            """, (user['id'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rx_id))
+            
+            # Log activity
+            cursor.execute("""
+                INSERT INTO activity_log (user_id, action, details, timestamp)
+                VALUES (?, ?, ?, ?)
+            """, (
+                user['id'],
+                'prescription_approved',
+                f"Quick approved prescription #{rx_id}",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            ))
+            
+            conn.commit()
+            
+            e.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Prescription #{rx_id} approved!"),
+                bgcolor="primary",
+            )
+            e.page.snack_bar.open = True
+            
+        except Exception as ex:
+            conn.rollback()
+            e.page.snack_bar = ft.SnackBar(
+                content=ft.Text(f"Error: {str(ex)}"),
+                bgcolor="error",
+            )
+            e.page.snack_bar.open = True
+        
+        finally:
+            conn.close()
+            load_prescriptions(e)
     
-    def reject_prescription(e, rx_id):
-        """Reject prescription."""
-        e.page.snack_bar = ft.SnackBar(
-            content=ft.Text(f"Prescription #{rx_id} rejected."),
-            bgcolor="error",
-        )
-        e.page.snack_bar.open = True
-        e.page.update()
-        load_prescriptions(e)
+    def quick_reject(e, rx_id):
+        """Quick reject prescription - requires reason in detail view."""
+        e.page.go(f"/pharmacist/prescription/{rx_id}")
     
     def load_prescriptions(e=None):
         """Load and filter prescriptions."""
         prescriptions_container.controls.clear()
         
-        all_prescriptions = get_mock_prescriptions()
-        
-        # Apply filters
         status = status_filter.value
-        query = search_field.value.lower() if search_field.value else ""
+        query = search_field.value if search_field.value else ""
         
-        if status != "All":
-            all_prescriptions = [rx for rx in all_prescriptions if rx['status'] == status]
-        
-        if query:
-            all_prescriptions = [
-                rx for rx in all_prescriptions
-                if query in rx['patient_name'].lower() or query in str(rx['id'])
-            ]
+        all_prescriptions = get_prescriptions_from_db(status, query)
         
         if all_prescriptions:
             prescriptions_container.controls.append(
@@ -233,44 +260,58 @@ def PrescriptionsView():
                     content=ft.Column([
                         ft.Icon(ft.Icons.SEARCH_OFF, size=80, color="outline"),
                         ft.Text("No prescriptions found", size=18, color="outline"),
+                        ft.Text("Try adjusting your filters", size=14, color="outline"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                     padding=50,
                 )
             )
         
-        if e:
+        if e and hasattr(e, 'page'):
             e.page.update()
     
     # Initial load
     class FakePage:
         snack_bar = None
         def update(self): pass
+        def go(self, route): pass
+    
     load_prescriptions(type('Event', (), {'page': FakePage()})())
     
     return ft.Column([
-        ft.Row([
-            ft.Icon(ft.Icons.ASSIGNMENT, color="primary", size=32),
-            ft.Text("Prescription Management", size=28, weight="bold"),
-        ], spacing=10),
-        ft.Text("Review, approve, or reject patient prescriptions", size=14, color="outline"),
+        # Navigation header with back button
+        NavigationHeader(
+            "Prescription Management",
+            "Review, approve, or reject patient prescriptions",
+            show_back=True,
+            back_route="/pharmacist/dashboard"
+        ),
         
-        ft.Container(height=20),
-        
-        # Filters
-        ft.Row([
-            search_field,
-            status_filter,
-            ft.ElevatedButton(
-                "Filter",
-                icon=ft.Icons.FILTER_ALT,
-                bgcolor="primary",
-                color="onPrimary",
-                on_click=load_prescriptions,
-            ),
-        ], spacing=10),
-        
-        ft.Container(height=20),
-        
-        # Prescriptions list
-        prescriptions_container,
+        ft.Container(
+            content=ft.Column([
+                # Filters
+                ft.Row([
+                    search_field,
+                    status_filter,
+                    ft.ElevatedButton(
+                        "Filter",
+                        icon=ft.Icons.FILTER_ALT,
+                        bgcolor="primary",
+                        color="onPrimary",
+                        on_click=load_prescriptions,
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.REFRESH,
+                        icon_color="primary",
+                        tooltip="Refresh",
+                        on_click=load_prescriptions,
+                    ),
+                ], spacing=10),
+                
+                ft.Container(height=20),
+                
+                # Prescriptions list
+                prescriptions_container,
+            ], spacing=0),
+            padding=20,
+        ),
     ], scroll=ft.ScrollMode.AUTO, spacing=0)

@@ -16,7 +16,7 @@ from views.patient.profile_view import ProfileView
 
 from views.admin.admin_dashboard import AdminDashboard
 from views.admin.user_management import UserManagement
-from views.admin.reports_view import ReportsView
+from views.admin.reports_view import ReportsView as AdminReportsView
 from views.admin.logs_view import SystemLogs
 
 from views.inventory.inventory_dashboard import InventoryDashboard
@@ -24,6 +24,8 @@ from views.inventory.manage_stock import ManageStock
 
 from views.pharmacist.pharmacist_dashboard import PharmacistDashboard
 from views.pharmacist.prescriptions_view import PrescriptionsView
+from views.pharmacist.prescription_detail import PrescriptionDetailView  
+from views.pharmacist.reports_view import ReportsView as PharmacistReportsView  
 
 from views.billing.billing_dashboard import BillingDashboard
 from views.billing.invoices_view import InvoicesView
@@ -96,6 +98,17 @@ def main(page: ft.Page):
 
             # 3. Pharmacist Views
             elif troute == "/pharmacist/prescriptions": content = PrescriptionsView()
+            elif troute == "/pharmacist/reports": content = PharmacistReportsView()  # ← NEW
+            # ← NEW: Prescription detail route
+            elif troute.startswith("/pharmacist/prescription/"):
+                rx_id = troute.split("/")[-1]
+                try:
+                    rx_id = int(rx_id)
+                    content = PrescriptionDetailView(rx_id)
+                except (ValueError, IndexError):
+                    # Invalid prescription ID, redirect to list
+                    page.go("/pharmacist/prescriptions")
+                    return
 
             # 4. Inventory Views
             elif troute == "/inventory/stock": content = ManageStock()
@@ -105,7 +118,7 @@ def main(page: ft.Page):
 
             # 6. Admin Views
             elif troute == "/admin/users": content = UserManagement()
-            elif troute == "/admin/reports": content = ReportsView()
+            elif troute == "/admin/reports": content = AdminReportsView()
             elif troute == "/admin/logs": content = SystemLogs()
 
             # 7. Staff Views

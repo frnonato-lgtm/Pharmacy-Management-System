@@ -1,9 +1,10 @@
-"""Pharmacist dashboard overview."""
+"""Pharmacist dashboard overview with real database integration."""
 
 import flet as ft
 from services.database import get_db_connection
 from state.app_state import AppState
-#from components.navigation_header import NavigationHeader
+from components.navigation_header import NavigationHeader
+from datetime import datetime
 
 def PharmacistDashboard():
     """Main pharmacist dashboard with statistics and quick actions."""
@@ -15,25 +16,63 @@ def PharmacistDashboard():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-# Count pending prescriptions
+    # Count pending prescriptions
     cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE status = 'Pending'")
     result = cursor.fetchone()
     pending_rx = result[0] if result else 0
-
-# Count approved prescriptions today
-    cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE status = 'Approved'")
+    
+    # Count approved prescriptions today
+    cursor.execute("""
+        SELECT COUNT(*) FROM prescriptions 
+        WHERE status = 'Approved' 
+        AND DATE(reviewed_date) = DATE('now')
+    """)
     result = cursor.fetchone()
     approved_rx = result[0] if result else 0
-
-# Count total patients
+    
+    # Count total patients
     cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'Patient'")
     result = cursor.fetchone()
     total_patients = result[0] if result else 0
-
-# Count medicines in stock
+    
+    # Count medicines in stock
     cursor.execute("SELECT COUNT(*) FROM medicines WHERE stock > 0")
     result = cursor.fetchone()
     medicines_available = result[0] if result else 0
+    
+    # Get pending prescriptions with patient info
+    cursor.execute("""
+        SELECT p.id, p.created_at, p.status,
+               u.full_name as patient_name,
+               m.name as medicine_name
+        FROM prescriptions p
+        LEFT JOIN users u ON p.patient_id = u.id
+        LEFT JOIN medicines m ON p.medicine_id = m.id
+        WHERE p.status = 'Pending'
+        ORDER BY p.created_at DESC
+        LIMIT 5
+    """)
+    pending_prescriptions = cursor.fetchall()
+    
+    # Get recent activity from activity_log
+    cursor.execute("""
+        SELECT action, details, timestamp
+        FROM activity_log
+        WHERE user_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 5
+    """, (user['id'],))
+    recent_activities = cursor.fetchall()
+    
+    # Get low stock alerts
+    cursor.execute("""
+        SELECT name, stock
+        FROM medicines
+        WHERE stock < 10 AND stock > 0
+        ORDER BY stock ASC
+        LIMIT 3
+    """)
+    low_stock_medicines = cursor.fetchall()
     
     conn.close()
     
@@ -77,19 +116,39 @@ def PharmacistDashboard():
             ),
         )
     
+    # Helper: Format time ago
+    def time_ago(timestamp_str):
+        try:
+            timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+            now = datetime.now()
+            delta = now - timestamp
+            
+            if delta.days > 0:
+                return f"{delta.days} day{'s' if delta.days > 1 else ''} ago"
+            elif delta.seconds >= 3600:
+                hours = delta.seconds // 3600
+                return f"{hours} hour{'s' if hours > 1 else ''} ago"
+            elif delta.seconds >= 60:
+                minutes = delta.seconds // 60
+                return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+            else:
+                return "Just now"
+        except:
+            return timestamp_str
+    
     # Helper: Create prescription item
-    def create_prescription_item(rx_id, patient_name, medicine, status, status_color, time):
+    def create_prescription_item(rx):
         return ft.Container(
             content=ft.Row([
                 ft.Column([
-                    ft.Text(f"Prescription #{rx_id}", weight="bold", size=14),
-                    ft.Text(f"Patient: {patient_name}", size=12, color="outline"),
-                    ft.Text(f"Medicine: {medicine}", size=12),
-                    ft.Text(f"Submitted: {time}", size=11, color="outline", italic=True),
+                    ft.Text(f"Prescription #{rx[0]}", weight="bold", size=14),
+                    ft.Text(f"Patient: {rx[3]}", size=12, color="outline"),
+                    ft.Text(f"Medicine: {rx[4]}", size=12),
+                    ft.Text(f"Submitted: {time_ago(rx[1])}", size=11, color="outline", italic=True),
                 ], spacing=3, expand=True),
                 ft.Container(
-                    content=ft.Text(status, size=12, weight="bold", color="onPrimaryContainer"),
-                    bgcolor=ft.Colors.with_opacity(0.2, status_color),
+                    content=ft.Text("Pending", size=12, weight="bold", color="onTertiaryContainer"),
+                    bgcolor=ft.Colors.with_opacity(0.2, "tertiary"),
                     padding=ft.padding.symmetric(horizontal=12, vertical=6),
                     border_radius=15,
                 ),
@@ -97,7 +156,7 @@ def PharmacistDashboard():
                     icon=ft.Icons.ARROW_FORWARD,
                     icon_color="primary",
                     tooltip="Review Prescription",
-                    on_click=lambda e: e.page.go(f"/pharmacist/prescription/{rx_id}"),
+                    on_click=lambda e, rx_id=rx[0]: e.page.go(f"/pharmacist/prescription/{rx_id}"),
                 ),
             ], spacing=10),
             padding=15,
@@ -119,39 +178,103 @@ def PharmacistDashboard():
             bgcolor=ft.Colors.with_opacity(0.05, color),
         )
     
+    # Helper: Create activity item
+    def create_activity_item(action, details, timestamp):
+        action_icons = {
+            'prescription_approved': '✓',
+            'prescription_rejected': '✗',
+            'prescription_dispensed': '📦',
+            'medicine_updated': '💊',
+        }
+        icon = action_icons.get(action, '•')
+        
+        return ft.Text(
+            f"{icon} {details}",
+            size=12,
+            color="outline",
+        )
+    
+    # Build pending prescriptions list
+    pending_rx_widgets = []
+    if pending_prescriptions:
+        for rx in pending_prescriptions:
+            pending_rx_widgets.append(create_prescription_item(rx))
+    else:
+        pending_rx_widgets.append(
+            ft.Container(
+                content=ft.Column([
+                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE, size=60, color="primary"),
+                    ft.Text("No pending prescriptions!", size=16, color="outline"),
+                    ft.Text("Great job! All prescriptions have been reviewed.", size=12, color="outline"),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
+                padding=30,
+            )
+        )
+    
+    # Build recent activity list
+    activity_widgets = []
+    if recent_activities:
+        for activity in recent_activities:
+            activity_widgets.append(create_activity_item(activity[0], activity[1], activity[2]))
+    else:
+        activity_widgets.append(
+            ft.Text("No recent activity", size=12, color="outline", italic=True)
+        )
+    
+    # Build alerts
+    alert_widgets = []
+    
+    # Low stock alerts
+    if low_stock_medicines:
+        alert_widgets.append(
+            create_alert_item(
+                f"{len(low_stock_medicines)} medicine(s) are low in stock",
+                ft.Icons.WARNING,
+                "error"
+            )
+        )
+    
+    # Pending prescriptions alert
+    if pending_rx > 5:
+        alert_widgets.append(
+            create_alert_item(
+                f"{pending_rx} prescriptions need review",
+                ft.Icons.PRIORITY_HIGH,
+                "tertiary"
+            )
+        )
+    
+    # If no alerts
+    if not alert_widgets:
+        alert_widgets.append(
+            create_alert_item(
+                "All systems normal",
+                ft.Icons.CHECK_CIRCLE,
+                "primary"
+            )
+        )
+    
     return ft.Column([
-        # Welcome header
-        ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.MEDICAL_SERVICES, color="primary", size=40),
-                ft.Column([
-                    ft.Text(
-                        f"Welcome, {user_name}",
-                        size=28,
-                        weight="bold",
-                    ),
-                    ft.Text(
-                        "Pharmacist Dashboard - Review and validate prescriptions",
-                        size=14,
-                        color="outline",
-                    ),
-                ], spacing=5),
-            ], spacing=15),
-            padding=20,
+        # Navigation header (no back button on dashboard - it's the home page)
+        NavigationHeader(
+            f"Welcome, {user_name}",
+            "Pharmacist Dashboard - Review and validate prescriptions",
+            show_back=False,  # Dashboard is the starting point
+            show_forward=False,
         ),
         
         # Statistics cards
         ft.Row([
             create_stat_card(
                 "Pending Reviews",
-                pending_rx if pending_rx > 0 else 8,  # Mock data fallback
+                pending_rx,
                 ft.Icons.PENDING_ACTIONS,
                 "tertiary",
                 "Requires action"
             ),
             create_stat_card(
                 "Approved Today",
-                approved_rx if approved_rx > 0 else 16,  # Mock data
+                approved_rx,
                 ft.Icons.CHECK_CIRCLE,
                 "primary",
                 "This shift"
@@ -216,31 +339,7 @@ def PharmacistDashboard():
                     ], spacing=10),
                     ft.Divider(),
                     
-                    # Sample pending prescriptions (replace with real DB data)
-                    create_prescription_item(
-                        "1234",
-                        "John Doe",
-                        "Amoxicillin 500mg",
-                        "Pending",
-                        "tertiary",
-                        "2 hours ago"
-                    ),
-                    create_prescription_item(
-                        "1235",
-                        "Jane Smith",
-                        "Paracetamol 500mg",
-                        "Pending",
-                        "tertiary",
-                        "3 hours ago"
-                    ),
-                    create_prescription_item(
-                        "1236",
-                        "Robert Johnson",
-                        "Ibuprofen 400mg",
-                        "Pending",
-                        "tertiary",
-                        "5 hours ago"
-                    ),
+                    *pending_rx_widgets,
                     
                     ft.Container(height=10),
                     ft.TextButton(
@@ -264,35 +363,18 @@ def PharmacistDashboard():
                     ], spacing=10),
                     ft.Divider(),
                     
-                    create_alert_item(
-                        "3 medicines are low in stock",
-                        ft.Icons.WARNING,
-                        "error"
-                    ),
+                    *alert_widgets,
                     
-                    create_alert_item(
-                        "2 prescriptions expiring today",
-                        ft.Icons.SCHEDULE,
-                        "tertiary"
-                    ),
-                    
-                    create_alert_item(
-                        "System maintenance tonight at 11 PM",
-                        ft.Icons.INFO,
-                        "secondary"
-                    ),
-                    
-                    ft.Container(height=10),
+                    ft.Container(height=15),
                     
                     ft.Text("Recent Activity", size=16, weight="bold"),
                     ft.Divider(height=10),
                     
                     ft.Container(
-                        content=ft.Column([
-                            ft.Text("✓ Approved Prescription #1230", size=12),
-                            ft.Text("✓ Dispensed Amoxicillin to John Doe", size=12),
-                            ft.Text("✓ Updated patient notes", size=12),
-                        ], spacing=8),
+                        content=ft.Column(
+                            activity_widgets,
+                            spacing=8,
+                        ),
                         padding=10,
                         border=ft.border.all(1, "outlineVariant"),
                         border_radius=8,
