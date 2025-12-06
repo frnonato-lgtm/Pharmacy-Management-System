@@ -34,6 +34,8 @@ from views.billing.invoices_view import InvoicesView
 from views.staff.staff_dashboard import StaffDashboard
 from views.staff.patient_search import StaffPatientSearch
 from views.staff.patient_detail import StaffPatientDetail
+from views.staff.all_patients import AllPatientsView
+from views.staff.help_desk import HelpDeskView
 
 def main(page: ft.Page):
     page.title = "Kaputt Kommandos PMS"
@@ -102,7 +104,6 @@ def main(page: ft.Page):
             elif troute == "/pharmacist/prescriptions": content = PrescriptionsView()
             elif troute == "/pharmacist/reports": content = PharmacistReportsView() 
             elif troute == "/pharmacist/medicines": content = PharmacistMedicineSearch()
-            # ← NEW: Prescription detail route
             elif troute.startswith("/pharmacist/prescription/"):
                 rx_id = troute.split("/")[-1]
                 try:
@@ -127,6 +128,8 @@ def main(page: ft.Page):
             # 7. Staff Views
             elif troute == "/staff/search": content = StaffPatientSearch()
             #elif troute == "/staff/help": content = StaffPatientDetail()
+            elif troute == "/staff/patients": content = AllPatientsView() 
+            elif troute == "/staff/help": content = HelpDeskView()
             elif troute.startswith("/staff/patient/"):
                 patient_id = troute.split("/")[-1]
                 content = StaffPatientDetail(patient_id)

@@ -29,25 +29,39 @@ def StaffPatientDetail(patient_id):
             ),
         ])
     
-    patient = {
-        'id': patient_row[0],
-        'username': patient_row[1],
-        'full_name': patient_row[4],
-        'last_name': patient_row[5],
-        'email': patient_row[6],
-        'phone': patient_row[7],
-        'dob': patient_row[8],
-        'address': patient_row[9],
-        'created_at': patient_row[10] if len(patient_row) > 10 else None,
-    }
+    # Convert to dict - handle different row structures
+    try:
+        patient = dict(patient_row)
+    except:
+        patient = {
+            'id': patient_row[0],
+            'username': patient_row[1],
+            'full_name': patient_row[4] if len(patient_row) > 4 else 'Unknown',
+            'last_name': patient_row[5] if len(patient_row) > 5 else '',
+            'email': patient_row[6] if len(patient_row) > 6 else None,
+            'phone': patient_row[7] if len(patient_row) > 7 else None,
+            'dob': patient_row[8] if len(patient_row) > 8 else None,
+            'address': patient_row[9] if len(patient_row) > 9 else None,
+            'created_at': patient_row[10] if len(patient_row) > 10 else None,
+        }
     
-    # Get prescription count
-    cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE patient_id = ?", (patient_id,))
-    prescription_count = cursor.fetchone()[0]
+    # Get prescription count - with error handling
+    prescription_count = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE patient_id = ?", (patient_id,))
+        result = cursor.fetchone()
+        prescription_count = result[0] if result else 0
+    except Exception:
+        prescription_count = 0  # Table doesn't exist yet
     
-    # Get order count
-    cursor.execute("SELECT COUNT(*) FROM orders WHERE patient_id = ?", (patient_id,))
-    order_count = cursor.fetchone()[0]
+    # Get order count - with error handling
+    order_count = 0
+    try:
+        cursor.execute("SELECT COUNT(*) FROM orders WHERE patient_id = ?", (patient_id,))
+        result = cursor.fetchone()
+        order_count = result[0] if result else 0
+    except Exception:
+        order_count = 0  # Table doesn't exist yet
     
     conn.close()
     
@@ -71,7 +85,7 @@ def StaffPatientDetail(patient_id):
     
     return ft.Column([
         NavigationHeader(
-            f"Patient: {patient['full_name']}",
+            f"Patient: {patient.get('full_name', 'Unknown')}",
             "Read-only patient record view",
             show_back=True,
             back_route="/staff/search"
@@ -91,9 +105,9 @@ def StaffPatientDetail(patient_id):
                             alignment=ft.alignment.center,
                         ),
                         ft.Column([
-                            ft.Text(patient['full_name'], size=24, weight="bold"),
-                            ft.Text(f"Patient ID: {patient['id']}", size=14, color="outline"),
-                            ft.Text(f"Username: {patient['username']}", size=13, color="outline"),
+                            ft.Text(patient.get('full_name', 'Unknown'), size=24, weight="bold"),
+                            ft.Text(f"Patient ID: {patient.get('id', 'N/A')}", size=14, color="outline"),
+                            ft.Text(f"Username: {patient.get('username', 'N/A')}", size=13, color="outline"),
                         ], spacing=3),
                     ], spacing=20),
                     padding=20,
@@ -108,8 +122,11 @@ def StaffPatientDetail(patient_id):
                 ft.Row([
                     info_card("Prescriptions", prescription_count, ft.Icons.MEDICATION),
                     info_card("Orders", order_count, ft.Icons.SHOPPING_BAG),
-                    info_card("Member Since", patient['created_at'][:10] if patient['created_at'] else "N/A", 
-                             ft.Icons.CALENDAR_TODAY),
+                    info_card(
+                        "Member Since",
+                        patient.get('created_at', 'N/A')[:10] if patient.get('created_at') else "N/A",
+                        ft.Icons.CALENDAR_TODAY
+                    ),
                 ], spacing=15),
                 
                 ft.Container(height=20),
@@ -117,8 +134,8 @@ def StaffPatientDetail(patient_id):
                 # Contact Information
                 ft.Text("Contact Information", size=20, weight="bold"),
                 ft.Row([
-                    info_card("Email", patient['email'], ft.Icons.EMAIL),
-                    info_card("Phone", patient['phone'], ft.Icons.PHONE),
+                    info_card("Email", patient.get('email'), ft.Icons.EMAIL),
+                    info_card("Phone", patient.get('phone'), ft.Icons.PHONE),
                 ], spacing=15),
                 
                 ft.Container(height=20),
@@ -126,8 +143,8 @@ def StaffPatientDetail(patient_id):
                 # Personal Information
                 ft.Text("Personal Information", size=20, weight="bold"),
                 ft.Row([
-                    info_card("Date of Birth", patient['dob'], ft.Icons.CAKE),
-                    info_card("Address", patient['address'], ft.Icons.HOME),
+                    info_card("Date of Birth", patient.get('dob'), ft.Icons.CAKE),
+                    info_card("Address", patient.get('address'), ft.Icons.HOME),
                 ], spacing=15),
                 
                 ft.Container(height=20),
@@ -139,7 +156,7 @@ def StaffPatientDetail(patient_id):
                         ft.Column([
                             ft.Text("Read-Only Access", size=14, weight="bold", color="tertiary"),
                             ft.Text(
-                                "You can view patient information but cannot make changes. Contact administrators for updates.",
+                                "You can view patient information but cannot make changes.",
                                 size=12,
                                 color="outline",
                             ),

@@ -309,7 +309,7 @@ def PharmacistDashboard():
                     create_action_button(
                         "Search Medicines",
                         ft.Icons.SEARCH,
-                        "/patient/search",
+                        "/pharmacist/medicines",
                         "secondary",
                     ),
                     create_action_button(

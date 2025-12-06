@@ -1,7 +1,7 @@
 """
-Database migration to add missing fields for pharmacist functionality.
-Run this ONCE to update your existing database.
-Place this in: src/services/db_migration.py
+Complete Database Migration - All Features
+Run this ONCE to update your existing database with all missing tables.
+Includes: Pharmacist features + Staff/Patient features + Billing features
 """
 
 import sqlite3
@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 def run_migration():
-    """Add necessary fields to existing database."""
+    """Add all necessary fields and tables to existing database."""
     
     # Get the correct path to your database
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,9 +20,15 @@ def run_migration():
     cursor = conn.cursor()
     
     try:
-        print("🔄 Starting database migration...")
+        print("🔄 Starting complete database migration...\n")
         
-        # 1. Create activity_log table for tracking pharmacist actions
+        # ============================================
+        # PART 1: PHARMACIST FEATURES
+        # ============================================
+        print("📋 Part 1: Pharmacist Features")
+        print("-" * 50)
+        
+        # 1. Create activity_log table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS activity_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,74 +42,146 @@ def run_migration():
         print("✅ Activity log table created")
         
         # 2. Add missing fields to prescriptions table
-        # Check which columns exist first
         cursor.execute("PRAGMA table_info(prescriptions)")
         existing_columns = [col[1] for col in cursor.fetchall()]
         
-        # Add medicine_id if it doesn't exist
         if 'medicine_id' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN medicine_id INTEGER")
-            print("✅ Added medicine_id column")
+            print("✅ Added medicine_id column to prescriptions")
         
         if 'dosage' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN dosage TEXT")
-            print("✅ Added dosage column")
+            print("✅ Added dosage column to prescriptions")
         
         if 'frequency' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN frequency TEXT")
-            print("✅ Added frequency column")
+            print("✅ Added frequency column to prescriptions")
         
         if 'duration' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN duration INTEGER")
-            print("✅ Added duration column")
+            print("✅ Added duration column to prescriptions")
         
         if 'doctor_name' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN doctor_name TEXT")
-            print("✅ Added doctor_name column")
+            print("✅ Added doctor_name column to prescriptions")
         
-        # Add pharmacist review fields if they don't exist
         if 'pharmacist_id' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN pharmacist_id INTEGER")
-            print("✅ Added pharmacist_id column")
+            print("✅ Added pharmacist_id column to prescriptions")
         
         if 'pharmacist_notes' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN pharmacist_notes TEXT")
-            print("✅ Added pharmacist_notes column")
+            print("✅ Added pharmacist_notes column to prescriptions")
         
         if 'reviewed_date' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN reviewed_date TIMESTAMP")
-            print("✅ Added reviewed_date column")
+            print("✅ Added reviewed_date column to prescriptions")
         
-        # 3. Create indexes for better performance
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_activity_user 
-            ON activity_log(user_id)
-        """)
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_activity_timestamp 
-            ON activity_log(timestamp)
-        """)
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_prescriptions_status 
-            ON prescriptions(status)
-        """)
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_prescriptions_patient 
-            ON prescriptions(patient_id)
-        """)
-        print("✅ Created database indexes")
+        # ============================================
+        # PART 2: STAFF/PATIENT FEATURES (ORDERS)
+        # ============================================
+        print("\n📋 Part 2: Orders & Shopping Features")
+        print("-" * 50)
         
-        # 4. Add some sample prescriptions if the table is empty or has only old records
+        # 3. Create orders table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='orders'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE orders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    patient_id INTEGER NOT NULL,
+                    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT DEFAULT 'Pending',
+                    total_amount REAL NOT NULL,
+                    payment_method TEXT,
+                    payment_status TEXT DEFAULT 'Unpaid',
+                    notes TEXT,
+                    FOREIGN KEY (patient_id) REFERENCES users(id)
+                )
+            """)
+            print("✅ Orders table created")
+        else:
+            print("✅ Orders table already exists")
+        
+        # 4. Create order_items table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='order_items'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE order_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_id INTEGER NOT NULL,
+                    medicine_id INTEGER NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    unit_price REAL NOT NULL,
+                    subtotal REAL NOT NULL,
+                    FOREIGN KEY (order_id) REFERENCES orders(id),
+                    FOREIGN KEY (medicine_id) REFERENCES medicines(id)
+                )
+            """)
+            print("✅ Order_items table created")
+        else:
+            print("✅ Order_items table already exists")
+        
+        # ============================================
+        # PART 3: BILLING FEATURES (Already exists but verify)
+        # ============================================
+        print("\n📋 Part 3: Billing Features")
+        print("-" * 50)
+        
+        # 5. Verify invoices table exists (already in your database.py but let's make sure)
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='invoices'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE invoices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    invoice_number TEXT UNIQUE NOT NULL,
+                    patient_id INTEGER NOT NULL,
+                    total_amount REAL NOT NULL,
+                    status TEXT DEFAULT 'Unpaid',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (patient_id) REFERENCES users(id)
+                )
+            """)
+            print("✅ Invoices table created")
+        else:
+            print("✅ Invoices table already exists")
+        
+        # ============================================
+        # PART 4: DATABASE INDEXES (Performance)
+        # ============================================
+        print("\n📋 Part 4: Database Indexes")
+        print("-" * 50)
+        
+        # Activity log indexes
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_activity_user ON activity_log(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_log(timestamp)")
+        
+        # Prescription indexes
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prescriptions_status ON prescriptions(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON prescriptions(patient_id)")
+        
+        # Order indexes
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_patient ON orders(patient_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)")
+        
+        print("✅ All database indexes created")
+        
+        # ============================================
+        # PART 5: SAMPLE DATA (Optional)
+        # ============================================
+        print("\n📋 Part 5: Sample Data")
+        print("-" * 50)
+        
+        # Add sample prescriptions if needed
         cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE medicine_id IS NOT NULL")
         if cursor.fetchone()[0] == 0:
             print("📝 Adding sample prescriptions...")
             
-            # Get patient ID (assuming 'pat' user exists)
             cursor.execute("SELECT id FROM users WHERE username = 'pat'")
             patient = cursor.fetchone()
             patient_id = patient[0] if patient else 1
             
-            # Get some medicine IDs
             cursor.execute("SELECT id FROM medicines LIMIT 4")
             medicine_ids = [row[0] for row in cursor.fetchall()]
             
@@ -122,15 +200,61 @@ def run_migration():
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, sample_prescriptions)
                 print(f"✅ Added {len(sample_prescriptions)} sample prescriptions")
+        else:
+            print("✅ Prescriptions table has data")
         
+        # Add sample orders if needed
+        cursor.execute("SELECT COUNT(*) FROM orders")
+        if cursor.fetchone()[0] == 0:
+            print("📝 Adding sample orders...")
+            
+            cursor.execute("SELECT id FROM users WHERE username = 'pat'")
+            patient = cursor.fetchone()
+            patient_id = patient[0] if patient else 1
+            
+            cursor.execute("SELECT id, price FROM medicines LIMIT 3")
+            medicines = cursor.fetchall()
+            
+            if medicines:
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Create sample order
+                cursor.execute("""
+                    INSERT INTO orders (patient_id, order_date, status, total_amount, payment_method, payment_status, notes)
+                    VALUES (?, ?, 'Completed', 150.00, 'Cash', 'Paid', 'Sample order')
+                """, (patient_id, now))
+                
+                order_id = cursor.lastrowid
+                
+                # Add order items
+                for med in medicines[:2]:  # Use first 2 medicines
+                    cursor.execute("""
+                        INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
+                        VALUES (?, ?, 2, ?, ?)
+                    """, (order_id, med[0], med[1], med[1] * 2))
+                
+                print("✅ Added 1 sample order with 2 items")
+        else:
+            print("✅ Orders table has data")
+        
+        # ============================================
+        # COMMIT CHANGES
+        # ============================================
         conn.commit()
-        print("\n🎉 Migration completed successfully!")
+        
+        print("\n" + "=" * 50)
+        print("🎉 MIGRATION COMPLETED SUCCESSFULLY!")
+        print("=" * 50)
         print("\n📋 Summary:")
-        print("   - Activity log table created")
-        print("   - Prescription fields updated")
-        print("   - Database indexes created")
-        print("   - Sample data added (if needed)")
-        print("\n✅ You can now use the pharmacist features!")
+        print("   ✅ Activity log table (Pharmacist)")
+        print("   ✅ Prescription fields updated (Pharmacist)")
+        print("   ✅ Orders table (Staff/Patient)")
+        print("   ✅ Order_items table (Staff/Patient)")
+        print("   ✅ Invoices table verified (Billing)")
+        print("   ✅ Database indexes created (Performance)")
+        print("   ✅ Sample data added (Testing)")
+        print("\n✨ All features are now ready to use!")
+        print("=" * 50 + "\n")
         
     except Exception as e:
         conn.rollback()

@@ -87,7 +87,8 @@ class AppLayout(ft.Row):
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.HISTORY, label="Logs"))
         elif role == "Staff":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON_SEARCH, label="Find Patient"))
-            
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="All Patients"))  
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.HELP, label="Help Desk"))  
         # Only show Logout in sidebar if NOT a Patient
         if role != "Patient":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.LOGOUT, label="Logout"))
@@ -112,6 +113,8 @@ class AppLayout(ft.Row):
         elif label == "Manage Stock": self.page.go("/inventory/stock")
         elif label == "Invoices": self.page.go("/billing/invoices")
         elif label == "Find Patient": self.page.go("/staff/search")
+        elif label == "All Patients": self.page.go("/staff/patients")  # Add this
+        elif label == "Help Desk": self.page.go("/staff/help")  # Add this
         # Admin links
         elif label == "Users": self.page.go("/admin/users")
         elif label == "Reports": self.page.go("/admin/reports")
