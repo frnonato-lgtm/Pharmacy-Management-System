@@ -123,12 +123,12 @@ def run_migration():
             print("✅ Order_items table already exists")
         
         # ============================================
-        # PART 3: BILLING FEATURES (Already exists but verify)
+        # PART 3: BILLING FEATURES (Enhanced)
         # ============================================
         print("\n📋 Part 3: Billing Features")
         print("-" * 50)
         
-        # 5. Verify invoices table exists (already in your database.py but let's make sure)
+        # 5. Check if invoices table needs updates
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='invoices'")
         if not cursor.fetchone():
             cursor.execute("""
@@ -136,15 +136,80 @@ def run_migration():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     invoice_number TEXT UNIQUE NOT NULL,
                     patient_id INTEGER NOT NULL,
+                    order_id INTEGER,
+                    subtotal REAL NOT NULL,
+                    tax REAL DEFAULT 0,
+                    discount REAL DEFAULT 0,
                     total_amount REAL NOT NULL,
                     status TEXT DEFAULT 'Unpaid',
+                    payment_method TEXT,
+                    payment_date TIMESTAMP,
+                    billing_clerk_id INTEGER,
+                    notes TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (patient_id) REFERENCES users(id)
+                    FOREIGN KEY (patient_id) REFERENCES users(id),
+                    FOREIGN KEY (order_id) REFERENCES orders(id),
+                    FOREIGN KEY (billing_clerk_id) REFERENCES users(id)
                 )
             """)
-            print("✅ Invoices table created")
+            print("✅ Invoices table created with full billing features")
         else:
-            print("✅ Invoices table already exists")
+            # Add missing columns to existing invoices table
+            cursor.execute("PRAGMA table_info(invoices)")
+            invoice_columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'order_id' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN order_id INTEGER")
+                print("✅ Added order_id to invoices")
+            
+            if 'subtotal' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN subtotal REAL DEFAULT 0")
+                print("✅ Added subtotal to invoices")
+            
+            if 'tax' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN tax REAL DEFAULT 0")
+                print("✅ Added tax to invoices")
+            
+            if 'discount' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN discount REAL DEFAULT 0")
+                print("✅ Added discount to invoices")
+            
+            if 'payment_method' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN payment_method TEXT")
+                print("✅ Added payment_method to invoices")
+            
+            if 'payment_date' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN payment_date TIMESTAMP")
+                print("✅ Added payment_date to invoices")
+            
+            if 'billing_clerk_id' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN billing_clerk_id INTEGER")
+                print("✅ Added billing_clerk_id to invoices")
+            
+            if 'notes' not in invoice_columns:
+                cursor.execute("ALTER TABLE invoices ADD COLUMN notes TEXT")
+                print("✅ Added notes to invoices")
+        
+        # 6. Create payments tracking table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='payments'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE payments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    invoice_id INTEGER NOT NULL,
+                    amount REAL NOT NULL,
+                    payment_method TEXT NOT NULL,
+                    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    transaction_id TEXT,
+                    processed_by INTEGER,
+                    notes TEXT,
+                    FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+                    FOREIGN KEY (processed_by) REFERENCES users(id)
+                )
+            """)
+            print("✅ Payments table created")
+        else:
+            print("✅ Payments table already exists")
         
         # ============================================
         # PART 4: DATABASE INDEXES (Performance)
@@ -164,6 +229,12 @@ def run_migration():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_patient ON orders(patient_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)")
+        
+        # Billing indexes
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_patient ON invoices(patient_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id)")
         
         print("✅ All database indexes created")
         

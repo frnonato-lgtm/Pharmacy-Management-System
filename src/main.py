@@ -18,6 +18,7 @@ from views.admin.admin_dashboard import AdminDashboard
 from views.admin.user_management import UserManagement
 from views.admin.reports_view import ReportsView as AdminReportsView
 from views.admin.logs_view import SystemLogs
+#from views.audit_log_viewer import AuditLogViewer
 
 from views.inventory.inventory_dashboard import InventoryDashboard
 from views.inventory.manage_stock import ManageStock
@@ -29,7 +30,8 @@ from views.pharmacist.reports_view import ReportsView as PharmacistReportsView
 from views.pharmacist.medicine_search import PharmacistMedicineSearch
 
 from views.billing.billing_dashboard import BillingDashboard
-from views.billing.invoices_view import InvoicesView
+from views.billing.create_invoices_view import CreateInvoicesView
+
 
 from views.staff.staff_dashboard import StaffDashboard
 from views.staff.patient_search import StaffPatientSearch
@@ -118,13 +120,13 @@ def main(page: ft.Page):
             elif troute == "/inventory/stock": content = ManageStock()
 
             # 5. Billing Views
-            elif troute == "/billing/invoices": content = InvoicesView()
-
+            elif troute == "/billing/invoices": content = CreateInvoicesView()
+            
             # 6. Admin Views
             elif troute == "/admin/users": content = UserManagement()
             elif troute == "/admin/reports": content = AdminReportsView()
             elif troute == "/admin/logs": content = SystemLogs()
-
+            #elif troute == "/admin/audit": content = AuditLogViewer()
             # 7. Staff Views
             elif troute == "/staff/search": content = StaffPatientSearch()
             #elif troute == "/staff/help": content = StaffPatientDetail()
