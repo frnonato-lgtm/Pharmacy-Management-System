@@ -26,7 +26,7 @@ from views.pharmacist.pharmacist_dashboard import PharmacistDashboard
 from views.pharmacist.prescriptions_view import PrescriptionsView
 from views.pharmacist.prescription_detail import PrescriptionDetailView  
 from views.pharmacist.reports_view import ReportsView as PharmacistReportsView  
-
+from views.pharmacist.medicine_search import PharmacistMedicineSearch
 from views.billing.billing_dashboard import BillingDashboard
 from views.billing.invoices_view import InvoicesView
 
@@ -98,7 +98,8 @@ def main(page: ft.Page):
 
             # 3. Pharmacist Views
             elif troute == "/pharmacist/prescriptions": content = PrescriptionsView()
-            elif troute == "/pharmacist/reports": content = PharmacistReportsView()  # ← NEW
+            elif troute == "/pharmacist/reports": content = PharmacistReportsView() 
+            elif troute == "/pharmacist/medicines": content = PharmacistMedicineSearch()
             # ← NEW: Prescription detail route
             elif troute.startswith("/pharmacist/prescription/"):
                 rx_id = troute.split("/")[-1]
