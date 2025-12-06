@@ -27,11 +27,13 @@ from views.pharmacist.prescriptions_view import PrescriptionsView
 from views.pharmacist.prescription_detail import PrescriptionDetailView  
 from views.pharmacist.reports_view import ReportsView as PharmacistReportsView  
 from views.pharmacist.medicine_search import PharmacistMedicineSearch
+
 from views.billing.billing_dashboard import BillingDashboard
 from views.billing.invoices_view import InvoicesView
 
 from views.staff.staff_dashboard import StaffDashboard
 from views.staff.patient_search import StaffPatientSearch
+from views.staff.patient_detail import StaffPatientDetail
 
 def main(page: ft.Page):
     page.title = "Kaputt Kommandos PMS"
@@ -124,7 +126,10 @@ def main(page: ft.Page):
 
             # 7. Staff Views
             elif troute == "/staff/search": content = StaffPatientSearch()
-
+            #elif troute == "/staff/help": content = StaffPatientDetail()
+            elif troute.startswith("/staff/patient/"):
+                patient_id = troute.split("/")[-1]
+                content = StaffPatientDetail(patient_id)
             page.views.append(create_view(troute, [AppLayout(page, content)], None))
         
         page.update()
