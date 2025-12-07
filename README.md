@@ -65,13 +65,22 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Run the Application
+### 4. Initialize Database (Important!)
+Since we separated data from logic, you need to seed the database with the 54 medicines first.
+
+1. **Check for old data:** If a `pharmacy.db` file already exists in `src/storage/`, delete it to ensure a fresh start.
+2. **Run the seed script:**
+```bash
+python src/services/seed_medicines.py
+```
+*You should see the message: "Success! 54 Medicines added..."*
+
+### 5. Run the Application
+Once the database is seeded, navigate to the source folder and launch the app:
 ```bash
 cd src
 python main.py
 ```
-
-*Note: The `pharmacy.db` file will be generated automatically upon the first successful run.*
 
 ---
 
