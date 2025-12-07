@@ -31,7 +31,9 @@ from views.pharmacist.medicine_search import PharmacistMedicineSearch
 
 from views.billing.billing_dashboard import BillingDashboard
 from views.billing.create_invoices_view import CreateInvoicesView
-
+from views.billing.billing_reports_view import BillingReportsView
+from views.billing.invoices_list_view import InvoicesListView
+from views.billing.payment_history_view import PaymentHistoryView
 
 from views.staff.staff_dashboard import StaffDashboard
 from views.staff.patient_search import StaffPatientSearch
@@ -120,8 +122,10 @@ def main(page: ft.Page):
             elif troute == "/inventory/stock": content = ManageStock()
 
             # 5. Billing Views
-            elif troute == "/billing/invoices": content = CreateInvoicesView()
-            
+            elif troute == "/billing/create-invoice": content = CreateInvoicesView()
+            elif troute == "/billing/invoices": content = InvoicesListView()
+            elif troute == "/billing/payments": content = PaymentHistoryView()
+            elif troute == "/billing/reports" : content = BillingReportsView()
             # 6. Admin Views
             elif troute == "/admin/users": content = UserManagement()
             elif troute == "/admin/reports": content = AdminReportsView()
@@ -129,7 +133,7 @@ def main(page: ft.Page):
             #elif troute == "/admin/audit": content = AuditLogViewer()
             # 7. Staff Views
             elif troute == "/staff/search": content = StaffPatientSearch()
-            #elif troute == "/staff/help": content = StaffPatientDetail()
+            #elif troute == "/staff/patients": content = StaffPatientDetail()
             elif troute == "/staff/patients": content = AllPatientsView() 
             elif troute == "/staff/help": content = HelpDeskView()
             elif troute.startswith("/staff/patient/"):

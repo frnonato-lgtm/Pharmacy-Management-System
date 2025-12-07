@@ -240,14 +240,13 @@ def BillingDashboard():
                         ft.Text("Quick Actions", size=20, weight="bold"),
                         ft.Row([
                             create_action_button(
-                                "View All Invoices"
-                                ,
+                                "Create Invoice",
                                 ft.Icons.ADD_CARD,
                                 "/billing/create-invoice",
                                 "primary",
                             ),
                             create_action_button(
-                                "Create Invoice",
+                                "View All Invoices",
                                 ft.Icons.RECEIPT_LONG,
                                 "/billing/invoices",
                                 "secondary",
