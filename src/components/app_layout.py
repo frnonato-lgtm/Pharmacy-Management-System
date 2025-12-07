@@ -75,6 +75,10 @@ class AppLayout(ft.Row):
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.SHOPPING_CART, label="My Cart"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.RECEIPT_LONG, label="My Orders"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile")) 
+            #dests.append(ft.NavigationRailDestination(icon=ft.Icons.MEDICAL_SERVICES, label="Prescriptions"))  
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.RECEIPT_LONG, label="My Bills")) 
+            
+            
         elif role == "Pharmacist":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.MEDICAL_SERVICES, label="Prescriptions"))
         elif role == "Inventory":

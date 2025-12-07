@@ -1,11 +1,11 @@
-"""System reports generation and viewing."""
+"""System reports generation with real database data."""
 
 import flet as ft
 from services.database import get_db_connection
 from datetime import datetime, timedelta
 
 def ReportsView():
-    """Reports interface for administrators."""
+    """Reports interface with real database statistics."""
     
     report_output = ft.Column(spacing=10)
     
@@ -18,6 +18,7 @@ def ReportsView():
             ft.dropdown.Option("prescription_summary", "Prescription Summary"),
             ft.dropdown.Option("low_stock", "Low Stock Alert Report"),
             ft.dropdown.Option("system_usage", "System Usage Statistics"),
+            ft.dropdown.Option("orders_summary", "Orders Summary Report"),
         ],
         value="user_activity",
         width=300,
@@ -39,7 +40,7 @@ def ReportsView():
     )
     
     def generate_user_activity_report():
-        """Generate user activity report."""
+        """Generate user activity report from real data."""
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -81,8 +82,8 @@ def ReportsView():
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.PEOPLE, color="primary", size=20),
-                        ft.Text(role_stat['role'], size=14, weight="bold", expand=1),
-                        ft.Text(f"{role_stat['count']} users", size=14),
+                        ft.Text(role_stat[0], size=14, weight="bold", expand=1),
+                        ft.Text(f"{role_stat[1]} users", size=14),
                     ], spacing=10),
                     padding=10,
                     border=ft.border.all(1, "outlineVariant"),
@@ -116,11 +117,10 @@ def ReportsView():
                 controls.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Text(user['username'], size=12, expand=1),
-                            ft.Text(user['full_name'], size=12, expand=2),
-                            ft.Text(user['role'], size=12, expand=1),
-                            ft.Text(user['created_at'][:10] if user['created_at'] else "N/A", 
-                                   size=12, expand=1),
+                            ft.Text(user[0], size=12, expand=1),
+                            ft.Text(user[1] or "N/A", size=12, expand=2),
+                            ft.Text(user[2], size=12, expand=1),
+                            ft.Text(user[3][:10] if user[3] else "N/A", size=12, expand=1),
                         ]),
                         padding=10,
                         border=ft.border.all(1, "outlineVariant"),
@@ -131,22 +131,22 @@ def ReportsView():
         return controls
     
     def generate_inventory_report():
-        """Generate inventory status report."""
+        """Generate inventory status report from real data."""
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Get inventory statistics
         cursor.execute("SELECT COUNT(*) as total FROM medicines")
-        total_meds = cursor.fetchone()['total']
+        total_meds = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as low_stock FROM medicines WHERE stock < 10")
-        low_stock = cursor.fetchone()['low_stock']
+        low_stock = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as out_of_stock FROM medicines WHERE stock = 0")
-        out_of_stock = cursor.fetchone()['out_of_stock']
+        out_of_stock = cursor.fetchone()[0]
         
         cursor.execute("SELECT SUM(stock * price) as total_value FROM medicines")
-        total_value = cursor.fetchone()['total_value'] or 0
+        total_value = cursor.fetchone()[0] or 0
         
         # Get medicines by category
         cursor.execute("""
@@ -194,9 +194,9 @@ def ReportsView():
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.CATEGORY, color="secondary", size=20),
-                        ft.Text(cat['category'], size=14, weight="bold", expand=1),
-                        ft.Text(f"{cat['count']} items", size=14),
-                        ft.Text(f"Stock: {cat['total_stock']}", size=14),
+                        ft.Text(cat[0], size=14, weight="bold", expand=1),
+                        ft.Text(f"{cat[1]} items", size=14),
+                        ft.Text(f"Stock: {cat[2]}", size=14),
                     ], spacing=10),
                     padding=10,
                     border=ft.border.all(1, "outlineVariant"),
@@ -231,11 +231,11 @@ def ReportsView():
                 controls.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Text(med['name'], size=12, expand=2),
-                            ft.Text(med['category'], size=12, expand=1),
-                            ft.Text(str(med['stock']), size=12, expand=1),
-                            ft.Text(f"₱{med['price']:.2f}", size=12, expand=1),
-                            ft.Text(f"₱{med['value']:.2f}", size=12, expand=1),
+                            ft.Text(med[0], size=12, expand=2),
+                            ft.Text(med[1], size=12, expand=1),
+                            ft.Text(str(med[2]), size=12, expand=1),
+                            ft.Text(f"₱{med[3]:.2f}", size=12, expand=1),
+                            ft.Text(f"₱{med[4]:.2f}", size=12, expand=1),
                         ]),
                         padding=10,
                         border=ft.border.all(1, "outlineVariant"),
@@ -246,26 +246,26 @@ def ReportsView():
         return controls
     
     def generate_prescription_report():
-        """Generate prescription summary report."""
+        """Generate prescription summary report from real data."""
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Get prescription statistics
         cursor.execute("SELECT COUNT(*) as total FROM prescriptions")
-        total_rx = cursor.fetchone()['total']
+        total_rx = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as pending FROM prescriptions WHERE status = 'Pending'")
-        pending = cursor.fetchone()['pending']
+        pending = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as approved FROM prescriptions WHERE status = 'Approved'")
-        approved = cursor.fetchone()['approved']
+        approved = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as rejected FROM prescriptions WHERE status = 'Rejected'")
-        rejected = cursor.fetchone()['rejected']
+        rejected = cursor.fetchone()[0]
         
         # Get recent prescriptions
         cursor.execute("""
-            SELECT p.id, p.status, p.created_at, u.full_name as patient_name
+            SELECT p.id, p.status, p.created_at, u.full_name, u.username
             FROM prescriptions p
             JOIN users u ON p.patient_id = u.id
             ORDER BY p.created_at DESC
@@ -316,22 +316,21 @@ def ReportsView():
                     "Pending": "tertiary",
                     "Approved": "primary",
                     "Rejected": "error"
-                }.get(rx['status'], "outline")
+                }.get(rx[1], "outline")
                 
                 controls.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Text(f"#{rx['id']}", size=12, expand=1),
-                            ft.Text(rx['patient_name'], size=12, expand=2),
+                            ft.Text(f"#{rx[0]}", size=12, expand=1),
+                            ft.Text(rx[3] or rx[4], size=12, expand=2),
                             ft.Container(
-                                content=ft.Text(rx['status'], size=11, color=f"on{status_color.capitalize()}"),
-                                bgcolor=ft.Colors.with_opacity(0.2, status_color),
+                                content=ft.Text(rx[1], size=11, color="white"),
+                                bgcolor=status_color,
                                 padding=5,
                                 border_radius=5,
                                 expand=1,
                             ),
-                            ft.Text(rx['created_at'][:10] if rx['created_at'] else "N/A", 
-                                   size=12, expand=1),
+                            ft.Text(rx[2][:10] if rx[2] else "N/A", size=12, expand=1),
                         ]),
                         padding=10,
                         border=ft.border.all(1, "outlineVariant"),
@@ -342,7 +341,7 @@ def ReportsView():
         return controls
     
     def generate_low_stock_report():
-        """Generate low stock alert report."""
+        """Generate low stock alert report from real data."""
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -406,10 +405,10 @@ def ReportsView():
                 controls.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Text(item['name'], size=12, expand=2),
-                            ft.Text(item['category'], size=12, expand=1),
-                            ft.Text(f"₱{item['price']:.2f}", size=12, expand=1),
-                            ft.Text(item['supplier'] or "N/A", size=12, expand=2),
+                            ft.Text(item[0], size=12, expand=2),
+                            ft.Text(item[1], size=12, expand=1),
+                            ft.Text(f"₱{item[2]:.2f}", size=12, expand=1),
+                            ft.Text(item[3] or "N/A", size=12, expand=2),
                         ]),
                         padding=10,
                         border=ft.border.all(1, "error"),
@@ -453,12 +452,11 @@ def ReportsView():
                 controls.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Text(item['name'], size=12, expand=2),
-                            ft.Text(item['category'], size=12, expand=1),
-                            ft.Text(str(item['stock']), size=12, weight="bold", 
-                                   color="tertiary", expand=1),
-                            ft.Text(f"₱{item['price']:.2f}", size=12, expand=1),
-                            ft.Text(item['supplier'] or "N/A", size=12, expand=2),
+                            ft.Text(item[0], size=12, expand=2),
+                            ft.Text(item[1], size=12, expand=1),
+                            ft.Text(str(item[2]), size=12, weight="bold", color="tertiary", expand=1),
+                            ft.Text(f"₱{item[3]:.2f}", size=12, expand=1),
+                            ft.Text(item[4] or "N/A", size=12, expand=2),
                         ]),
                         padding=10,
                         border=ft.border.all(1, "outlineVariant"),
@@ -481,22 +479,22 @@ def ReportsView():
         return controls
     
     def generate_system_usage_report():
-        """Generate system usage statistics."""
+        """Generate system usage statistics from real data."""
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Get various counts
         cursor.execute("SELECT COUNT(*) as count FROM users")
-        total_users = cursor.fetchone()['count']
+        total_users = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as count FROM medicines")
-        total_medicines = cursor.fetchone()['count']
+        total_medicines = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as count FROM prescriptions")
-        total_prescriptions = cursor.fetchone()['count']
+        total_prescriptions = cursor.fetchone()[0]
         
-        cursor.execute("SELECT COUNT(*) as count FROM invoices")
-        total_invoices = cursor.fetchone()['count']
+        cursor.execute("SELECT COUNT(*) as count FROM orders")
+        total_orders = cursor.fetchone()[0]
         
         # Get users by role
         cursor.execute("""
@@ -522,7 +520,7 @@ def ReportsView():
                 create_summary_card("Total Users", total_users, ft.Icons.PEOPLE, "primary"),
                 create_summary_card("Total Medicines", total_medicines, ft.Icons.MEDICATION, "secondary"),
                 create_summary_card("Prescriptions", total_prescriptions, ft.Icons.DESCRIPTION, "tertiary"),
-                create_summary_card("Invoices", total_invoices, ft.Icons.RECEIPT, "primary"),
+                create_summary_card("Orders", total_orders, ft.Icons.SHOPPING_CART, "primary"),
             ], spacing=10, wrap=True),
             
             ft.Container(height=20),
@@ -532,13 +530,13 @@ def ReportsView():
         
         # User role distribution
         for role_data in users_by_role:
-            percentage = (role_data['count'] / total_users * 100) if total_users > 0 else 0
+            percentage = (role_data[1] / total_users * 100) if total_users > 0 else 0
             controls.append(
                 ft.Container(
                     content=ft.Column([
                         ft.Row([
-                            ft.Text(role_data['role'], size=14, weight="bold", expand=1),
-                            ft.Text(f"{role_data['count']} users ({percentage:.1f}%)", size=14),
+                            ft.Text(role_data[0], size=14, weight="bold", expand=1),
+                            ft.Text(f"{role_data[1]} users ({percentage:.1f}%)", size=14),
                         ]),
                         ft.ProgressBar(
                             value=percentage / 100,
@@ -551,6 +549,86 @@ def ReportsView():
                     border_radius=8,
                 )
             )
+        
+        return controls
+    
+    def generate_orders_summary():
+        """Generate orders summary report from real data."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get order statistics
+        cursor.execute("SELECT COUNT(*), SUM(total_amount) FROM orders")
+        result = cursor.fetchone()
+        total_orders = result[0]
+        total_revenue = result[1] or 0
+        
+        cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'Pending'")
+        pending = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM orders WHERE status = 'Completed'")
+        completed = cursor.fetchone()[0]
+        
+        # Get recent orders
+        cursor.execute("""
+            SELECT o.id, o.total_amount, o.status, o.order_date, u.username
+            FROM orders o
+            JOIN users u ON o.patient_id = u.id
+            ORDER BY o.order_date DESC
+            LIMIT 15
+        """)
+        orders = cursor.fetchall()
+        
+        conn.close()
+        
+        controls = [
+            ft.Text("Orders Summary Report", size=24, weight="bold"),
+            ft.Text(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", size=12, color="outline"),
+            ft.Divider(height=20),
+            
+            ft.Row([
+                create_summary_card("Total Orders", total_orders, ft.Icons.SHOPPING_CART, "primary"),
+                create_summary_card("Total Revenue", f"₱{total_revenue:,.2f}", ft.Icons.PAYMENTS, "secondary"),
+                create_summary_card("Pending", pending, ft.Icons.PENDING, "tertiary"),
+                create_summary_card("Completed", completed, ft.Icons.CHECK_CIRCLE, "primary"),
+            ], spacing=10, wrap=True),
+            
+            ft.Container(height=20),
+            ft.Text("Recent Orders", size=18, weight="bold"),
+            ft.Container(height=10),
+        ]
+        
+        if orders:
+            controls.append(
+                ft.Container(
+                    content=ft.Row([
+                        ft.Text("Order ID", size=12, weight="bold", expand=1),
+                        ft.Text("Customer", size=12, weight="bold", expand=2),
+                        ft.Text("Amount", size=12, weight="bold", expand=1),
+                        ft.Text("Status", size=12, weight="bold", expand=1),
+                        ft.Text("Date", size=12, weight="bold", expand=1),
+                    ]),
+                    bgcolor="surfaceVariant",
+                    padding=10,
+                    border_radius=8,
+                )
+            )
+            
+            for order in orders:
+                controls.append(
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Text(f"#{order[0]}", size=12, expand=1),
+                            ft.Text(order[4], size=12, expand=2),
+                            ft.Text(f"₱{order[1]:.2f}", size=12, expand=1),
+                            ft.Text(order[2], size=12, expand=1),
+                            ft.Text(order[3][:10] if order[3] else "N/A", size=12, expand=1),
+                        ]),
+                        padding=10,
+                        border=ft.border.all(1, "outlineVariant"),
+                        border_radius=8,
+                    )
+                )
         
         return controls
     
@@ -579,6 +657,7 @@ def ReportsView():
             "prescription_summary": generate_prescription_report,
             "low_stock": generate_low_stock_report,
             "system_usage": generate_system_usage_report,
+            "orders_summary": generate_orders_summary,
         }
         
         generator = report_generators.get(report_type.value)
@@ -600,7 +679,7 @@ def ReportsView():
         ft.Row([
             ft.Text("System Reports", size=28, weight="bold"),
         ]),
-        ft.Text("Generate and view system reports", size=14, color="outline"),
+        ft.Text("Generate comprehensive system reports", size=14, color="outline"),
         
         ft.Container(height=20),
         

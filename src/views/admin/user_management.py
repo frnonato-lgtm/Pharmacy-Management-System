@@ -1,10 +1,11 @@
-"""User management - Add, Edit, Delete, Deactivate users."""
+"""User management - Add, Edit, Delete users with real database."""
 
 import flet as ft
 from services.database import get_db_connection
+from datetime import datetime
 
 def UserManagement():
-    """User management interface."""
+    """User management interface with full CRUD operations."""
     
     users_container = ft.Column(spacing=10)
     search_field = ft.TextField(
@@ -46,6 +47,8 @@ def UserManagement():
         if role != "All":
             sql += " AND role = ?"
             params.append(role)
+        
+        sql += " ORDER BY created_at DESC"
         
         cursor.execute(sql, params)
         users = cursor.fetchall()
@@ -91,39 +94,142 @@ def UserManagement():
             def confirm_delete(dialog_e):
                 conn = get_db_connection()
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM users WHERE id = ?", (user['id'],))
-                conn.commit()
-                conn.close()
                 
-                dialog.open = False
-                e.page.update()
-                refresh_callback(e)
+                try:
+                    cursor.execute("DELETE FROM users WHERE id = ?", (user['id'],))
+                    conn.commit()
+                    
+                    e.control.page.dialog.open = False
+                    e.control.page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"User '{user['username']}' deleted successfully"),
+                        bgcolor="primary"
+                    )
+                    e.control.page.snack_bar.open = True
+                    refresh_callback(e)
+                except Exception as ex:
+                    e.control.page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"Error deleting user: {str(ex)}"),
+                        bgcolor="error"
+                    )
+                    e.control.page.snack_bar.open = True
+                finally:
+                    conn.close()
+                    e.control.page.update()
             
             def cancel_delete(dialog_e):
-                dialog.open = False
-                e.page.update()
+                dialog_e.control.page.dialog.open = False
+                dialog_e.control.page.update()
             
             dialog = ft.AlertDialog(
                 title=ft.Text("Confirm Delete"),
-                content=ft.Text(f"Are you sure you want to delete user '{user['username']}'?"),
+                content=ft.Text(f"Are you sure you want to delete user '{user['username']}'? This action cannot be undone."),
                 actions=[
                     ft.TextButton("Cancel", on_click=cancel_delete),
                     ft.ElevatedButton("Delete", bgcolor="error", color="onError", on_click=confirm_delete),
                 ],
             )
-            e.page.dialog = dialog
+            e.control.page.dialog = dialog
             dialog.open = True
-            e.page.update()
+            e.control.page.update()
         
         def edit_user(e):
-            e.page.snack_bar = ft.SnackBar(content=ft.Text("Edit feature coming soon!"))
-            e.page.snack_bar.open = True
-            e.page.update()
+            # Create edit form
+            username_field = ft.TextField(label="Username", value=user['username'], disabled=True)
+            fullname_field = ft.TextField(label="Full Name", value=user['full_name'] or "")
+            lastname_field = ft.TextField(label="Last Name", value=user['last_name'] or "")
+            email_field = ft.TextField(label="Email", value=user['email'] or "")
+            phone_field = ft.TextField(label="Phone", value=user['phone'] or "")
+            role_field = ft.Dropdown(
+                label="Role",
+                options=[
+                    ft.dropdown.Option("Patient"),
+                    ft.dropdown.Option("Pharmacist"),
+                    ft.dropdown.Option("Inventory"),
+                    ft.dropdown.Option("Billing"),
+                    ft.dropdown.Option("Staff"),
+                    ft.dropdown.Option("Admin"),
+                ],
+                value=user['role']
+            )
+            password_field = ft.TextField(
+                label="New Password (leave blank to keep current)",
+                password=True,
+                can_reveal_password=True
+            )
+            
+            def save_changes(dialog_e):
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                
+                try:
+                    # Update user
+                    if password_field.value:
+                        cursor.execute("""
+                            UPDATE users 
+                            SET full_name=?, last_name=?, email=?, phone=?, role=?, password=?
+                            WHERE id=?
+                        """, (fullname_field.value, lastname_field.value, email_field.value, 
+                              phone_field.value, role_field.value, password_field.value, user['id']))
+                    else:
+                        cursor.execute("""
+                            UPDATE users 
+                            SET full_name=?, last_name=?, email=?, phone=?, role=?
+                            WHERE id=?
+                        """, (fullname_field.value, lastname_field.value, email_field.value, 
+                              phone_field.value, role_field.value, user['id']))
+                    
+                    conn.commit()
+                    
+                    dialog_e.control.page.dialog.open = False
+                    dialog_e.control.page.snack_bar = ft.SnackBar(
+                        content=ft.Text("User updated successfully!"),
+                        bgcolor="primary"
+                    )
+                    dialog_e.control.page.snack_bar.open = True
+                    refresh_callback(dialog_e)
+                except Exception as ex:
+                    dialog_e.control.page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"Error updating user: {str(ex)}"),
+                        bgcolor="error"
+                    )
+                    dialog_e.control.page.snack_bar.open = True
+                finally:
+                    conn.close()
+                    dialog_e.control.page.update()
+            
+            def cancel_edit(dialog_e):
+                dialog_e.control.page.dialog.open = False
+                dialog_e.control.page.update()
+            
+            edit_dialog = ft.AlertDialog(
+                title=ft.Text(f"Edit User: {user['username']}"),
+                content=ft.Container(
+                    content=ft.Column([
+                        username_field,
+                        fullname_field,
+                        lastname_field,
+                        email_field,
+                        phone_field,
+                        role_field,
+                        password_field,
+                    ], tight=True, scroll=ft.ScrollMode.AUTO),
+                    width=400,
+                    height=400,
+                ),
+                actions=[
+                    ft.TextButton("Cancel", on_click=cancel_edit),
+                    ft.ElevatedButton("Save Changes", bgcolor="primary", color="onPrimary", on_click=save_changes),
+                ],
+            )
+            
+            e.control.page.dialog = edit_dialog
+            edit_dialog.open = True
+            e.control.page.update()
         
         return ft.Container(
             content=ft.Row([
                 ft.Text(user['username'], size=13, expand=1),
-                ft.Text(user['full_name'], size=13, expand=2),
+                ft.Text(user['full_name'] or "N/A", size=13, expand=2),
                 ft.Container(
                     content=ft.Text(user['role'], size=11, weight="bold", color="onPrimaryContainer"),
                     bgcolor=ft.Colors.with_opacity(0.2, "primary"),
@@ -152,6 +258,109 @@ def UserManagement():
             border_radius=8,
             bgcolor="surface",
         )
+    
+    def add_user(e):
+        """Show add user dialog."""
+        username_field = ft.TextField(label="Username *", hint_text="Unique username")
+        password_field = ft.TextField(label="Password *", password=True, can_reveal_password=True)
+        fullname_field = ft.TextField(label="Full Name", hint_text="First name")
+        lastname_field = ft.TextField(label="Last Name")
+        email_field = ft.TextField(label="Email", hint_text="user@example.com")
+        phone_field = ft.TextField(label="Phone", hint_text="09171234567")
+        role_field = ft.Dropdown(
+            label="Role *",
+            options=[
+                ft.dropdown.Option("Patient"),
+                ft.dropdown.Option("Pharmacist"),
+                ft.dropdown.Option("Inventory"),
+                ft.dropdown.Option("Billing"),
+                ft.dropdown.Option("Staff"),
+                ft.dropdown.Option("Admin"),
+            ],
+            value="Patient"
+        )
+        
+        def save_new_user(dialog_e):
+            # Validate
+            if not username_field.value or not password_field.value:
+                dialog_e.control.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Username and password are required!"),
+                    bgcolor="error"
+                )
+                dialog_e.control.page.snack_bar.open = True
+                dialog_e.control.page.update()
+                return
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            try:
+                # Check if username exists
+                cursor.execute("SELECT id FROM users WHERE username = ?", (username_field.value,))
+                if cursor.fetchone():
+                    dialog_e.control.page.snack_bar = ft.SnackBar(
+                        content=ft.Text("Username already exists!"),
+                        bgcolor="error"
+                    )
+                    dialog_e.control.page.snack_bar.open = True
+                    dialog_e.control.page.update()
+                    return
+                
+                # Insert new user
+                cursor.execute("""
+                    INSERT INTO users (username, password, role, full_name, last_name, email, phone, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (username_field.value, password_field.value, role_field.value, 
+                      fullname_field.value, lastname_field.value, email_field.value, 
+                      phone_field.value, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                
+                conn.commit()
+                
+                dialog_e.control.page.dialog.open = False
+                dialog_e.control.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"User '{username_field.value}' created successfully!"),
+                    bgcolor="primary"
+                )
+                dialog_e.control.page.snack_bar.open = True
+                load_users(dialog_e)
+            except Exception as ex:
+                dialog_e.control.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error creating user: {str(ex)}"),
+                    bgcolor="error"
+                )
+                dialog_e.control.page.snack_bar.open = True
+            finally:
+                conn.close()
+                dialog_e.control.page.update()
+        
+        def cancel_add(dialog_e):
+            dialog_e.control.page.dialog.open = False
+            dialog_e.control.page.update()
+        
+        add_dialog = ft.AlertDialog(
+            title=ft.Text("Add New User"),
+            content=ft.Container(
+                content=ft.Column([
+                    username_field,
+                    password_field,
+                    fullname_field,
+                    lastname_field,
+                    email_field,
+                    phone_field,
+                    role_field,
+                ], tight=True, scroll=ft.ScrollMode.AUTO),
+                width=400,
+                height=400,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=cancel_add),
+                ft.ElevatedButton("Create User", bgcolor="primary", color="onPrimary", on_click=save_new_user),
+            ],
+        )
+        
+        e.page.dialog = add_dialog
+        add_dialog.open = True
+        e.page.update()
     
     # Initial load
     class FakePage:
@@ -184,6 +393,7 @@ def UserManagement():
                 icon=ft.Icons.ADD,
                 bgcolor="secondary",
                 color="onSecondary",
+                on_click=add_user,
             ),
         ], spacing=10, wrap=True),
         

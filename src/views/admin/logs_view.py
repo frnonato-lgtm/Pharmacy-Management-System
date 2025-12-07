@@ -1,11 +1,11 @@
-"""System activity logs and audit trail."""
+"""System activity logs with real database data."""
 
 import flet as ft
 from services.database import get_db_connection
 from datetime import datetime, timedelta
 
 def SystemLogs():
-    """System logs and activity monitoring."""
+    """System logs and activity monitoring with real data."""
     
     logs_container = ft.Column(spacing=10)
     
@@ -14,11 +14,10 @@ def SystemLogs():
         label="Log Type",
         options=[
             ft.dropdown.Option("all", "All Activities"),
-            ft.dropdown.Option("login", "User Logins"),
-            ft.dropdown.Option("user_management", "User Management"),
+            ft.dropdown.Option("users", "User Activity"),
+            ft.dropdown.Option("prescriptions", "Prescriptions"),
+            ft.dropdown.Option("orders", "Orders"),
             ft.dropdown.Option("inventory", "Inventory Changes"),
-            ft.dropdown.Option("prescriptions", "Prescription Actions"),
-            ft.dropdown.Option("system", "System Events"),
         ],
         value="all",
         width=250,
@@ -43,128 +42,129 @@ def SystemLogs():
         width=300,
     )
     
-    def get_mock_logs():
-        """Generate mock activity logs (replace with real database logs)."""
-        now = datetime.now()
-        #for now activity timeline a mock page to see how sysact_log work
-        mock_logs = [
-            {
-                "id": 1,
-                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "admin",
-                "action": "Logged in",
-                "details": "Admin user logged into the system",
-                "type": "login",
-                "icon": ft.Icons.LOGIN,
+    def get_real_logs():
+        """Get real activity logs from database."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        logs = []
+        
+        # 1. Get user registrations
+        cursor.execute("""
+            SELECT id, username, full_name, role, created_at
+            FROM users
+            ORDER BY created_at DESC
+            LIMIT 20
+        """)
+        users = cursor.fetchall()
+        
+        for user in users:
+            logs.append({
+                "timestamp": user[4],
+                "user": user[1],
+                "action": f"New {user[3]} Registered",
+                "details": f"User '{user[2] or user[1]}' created account",
+                "type": "users",
+                "icon": ft.Icons.PERSON_ADD,
                 "color": "primary",
-            },
-            {
-                "id": 2,
-                "timestamp": (now - timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "Dr. Sarah Chen",
-                "action": "Approved Prescription",
-                "details": "Approved prescription #1234 for John Doe",
+            })
+        
+        # 2. Get prescription activities
+        cursor.execute("""
+            SELECT p.id, p.status, p.created_at, u.username, u.full_name
+            FROM prescriptions p
+            JOIN users u ON p.patient_id = u.id
+            ORDER BY p.created_at DESC
+            LIMIT 20
+        """)
+        prescriptions = cursor.fetchall()
+        
+        for rx in prescriptions:
+            status = rx[1]
+            color = "primary" if status == "Approved" else "tertiary" if status == "Pending" else "error"
+            icon = ft.Icons.CHECK_CIRCLE if status == "Approved" else ft.Icons.PENDING if status == "Pending" else ft.Icons.CANCEL
+            
+            logs.append({
+                "timestamp": rx[2],
+                "user": rx[3],
+                "action": f"Prescription #{rx[0]} {status}",
+                "details": f"Prescription for {rx[4] or rx[3]} status: {status}",
                 "type": "prescriptions",
-                "icon": ft.Icons.CHECK_CIRCLE,
-                "color": "primary",
-            },
-            {
-                "id": 3,
-                "timestamp": (now - timedelta(minutes=32)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "admin",
-                "action": "User Deleted",
-                "details": "Deleted user 'test_user' from the system",
-                "type": "user_management",
-                "icon": ft.Icons.DELETE,
-                "color": "error",
-            },
-            {
-                "id": 4,
-                "timestamp": (now - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "Mike Johnson",
-                "action": "Inventory Update",
-                "details": "Updated stock for Paracetamol 500mg: +100 units",
+                "icon": icon,
+                "color": color,
+            })
+        
+        # 3. Get order activities
+        cursor.execute("""
+            SELECT o.id, o.status, o.order_date, o.total_amount, u.username, u.full_name
+            FROM orders o
+            JOIN users u ON o.patient_id = u.id
+            ORDER BY o.order_date DESC
+            LIMIT 20
+        """)
+        orders = cursor.fetchall()
+        
+        for order in orders:
+            status = order[1]
+            color = "primary" if status == "Completed" else "tertiary" if status == "Pending" else "secondary"
+            
+            logs.append({
+                "timestamp": order[2],
+                "user": order[4],
+                "action": f"Order #{order[0]} - {status}",
+                "details": f"{order[5] or order[4]} placed order for ₱{order[3]:.2f}",
+                "type": "orders",
+                "icon": ft.Icons.SHOPPING_CART,
+                "color": color,
+            })
+        
+        # 4. Get inventory changes (medicines added/updated recently)
+        cursor.execute("""
+            SELECT id, name, stock, created_at
+            FROM medicines
+            ORDER BY created_at DESC
+            LIMIT 15
+        """)
+        medicines = cursor.fetchall()
+        
+        for med in medicines:
+            logs.append({
+                "timestamp": med[3],
+                "user": "system",
+                "action": "Medicine Added",
+                "details": f"{med[1]} added to inventory (Stock: {med[2]})",
                 "type": "inventory",
                 "icon": ft.Icons.INVENTORY,
                 "color": "secondary",
-            },
-            {
-                "id": 5,
-                "timestamp": (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "John Doe",
-                "action": "Account Created",
-                "details": "New patient registered in the system",
-                "type": "user_management",
-                "icon": ft.Icons.PERSON_ADD,
-                "color": "primary",
-            },
-            {
-                "id": 6,
-                "timestamp": (now - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "Lisa Martinez",
-                "action": "Invoice Generated",
-                "details": "Generated invoice #5001 for ₱450.00",
+            })
+        
+        # 5. Get invoice activities
+        cursor.execute("""
+            SELECT i.id, i.invoice_number, i.total_amount, i.status, i.created_at, u.username
+            FROM invoices i
+            JOIN users u ON i.patient_id = u.id
+            ORDER BY i.created_at DESC
+            LIMIT 15
+        """)
+        invoices = cursor.fetchall()
+        
+        for inv in invoices:
+            logs.append({
+                "timestamp": inv[4],
+                "user": inv[5],
+                "action": f"Invoice {inv[1]} Generated",
+                "details": f"Invoice for ₱{inv[2]:.2f} - Status: {inv[3]}",
                 "type": "billing",
                 "icon": ft.Icons.RECEIPT,
                 "color": "tertiary",
-            },
-            {
-                "id": 7,
-                "timestamp": (now - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "system",
-                "action": "Low Stock Alert",
-                "details": "Vitamin C stock dropped below reorder level (5 units)",
-                "type": "system",
-                "icon": ft.Icons.WARNING,
-                "color": "error",
-            },
-            {
-                "id": 8,
-                "timestamp": (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "admin",
-                "action": "System Backup",
-                "details": "Automated database backup completed successfully",
-                "type": "system",
-                "icon": ft.Icons.BACKUP,
-                "color": "primary",
-            },
-            {
-                "id": 9,
-                "timestamp": (now - timedelta(days=1, hours=2)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "Dr. Sarah Chen",
-                "action": "Rejected Prescription",
-                "details": "Rejected prescription #1230 - Invalid doctor signature",
-                "type": "prescriptions",
-                "icon": ft.Icons.CANCEL,
-                "color": "error",
-            },
-            {
-                "id": 10,
-                "timestamp": (now - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S"),
-                "user": "Anna Garcia",
-                "action": "Patient Record Accessed",
-                "details": "Viewed patient record for Jane Smith #4567",
-                "type": "user_management",
-                "icon": ft.Icons.VISIBILITY,
-                "color": "outline",
-            },
-        ]
+            })
         
-        # In real implementation, query from database: so for now since the db for other views are not implemented
-        #we use mock_logs or a fake stats
-        # conn = get_db_connection()
-        # cursor = conn.cursor()
-        # cursor.execute("SELECT * FROM activity_logs ORDER BY timestamp DESC LIMIT 50")
-        # logs = cursor.fetchall()
-        # conn.close()
-        #example if real implementation:
-        # Get recent medicines (pharmacist) for inventory logs
-        #cursor.execute("SELECT name, category, stock FROM medicines ORDER BY id DESC LIMIT 5")
-        #recent_medicines = cursor.fetchall()
-
-
-
-        return mock_logs
+        conn.close()
+        
+        # Sort all logs by timestamp (most recent first)
+        logs.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return logs
     
     def create_log_entry(log):
         """Create a log entry card."""
@@ -205,12 +205,6 @@ def SystemLogs():
                         ft.Text(time_ago, size=12, color="outline"),
                     ], spacing=5),
                 ], spacing=5, expand=True),
-                # More options
-                ft.IconButton(
-                    icon=ft.Icons.MORE_VERT,
-                    icon_color="outline",
-                    tooltip="More options",
-                ),
             ], spacing=15),
             padding=15,
             border=ft.border.all(1, "outlineVariant"),
@@ -238,8 +232,8 @@ def SystemLogs():
         """Load and filter logs."""
         logs_container.controls.clear()
         
-        # Get logs (mock for now)
-        all_logs = get_mock_logs()
+        # Get logs from database
+        all_logs = get_real_logs()
         
         # Apply filters
         log_type = log_type_filter.value
@@ -285,7 +279,7 @@ def SystemLogs():
                 )
             )
             
-            for log in all_logs:
+            for log in all_logs[:50]:  # Show max 50 logs
                 logs_container.controls.append(create_log_entry(log))
         else:
             logs_container.controls.append(
@@ -317,12 +311,11 @@ def SystemLogs():
         def confirm_clear(dialog_e):
             dialog.open = False
             e.page.snack_bar = ft.SnackBar(
-                content=ft.Text("Old logs cleared successfully!"),
+                content=ft.Text("This would clear old logs (feature not yet implemented)"),
                 bgcolor="primary",
             )
             e.page.snack_bar.open = True
             e.page.update()
-            load_logs(e)
         
         def cancel_clear(dialog_e):
             dialog.open = False
@@ -352,7 +345,7 @@ def SystemLogs():
         ft.Row([
             ft.Text("System Activity Logs", size=28, weight="bold"),
         ]),
-        ft.Text("Monitor user activities and system events", size=14, color="outline"),
+        ft.Text("Monitor real-time user activities and system events", size=14, color="outline"),
         
         ft.Container(height=20),
         
