@@ -4,6 +4,7 @@ from state.app_state import AppState
 
 def LoginPage(page: ft.Page, role_param="Patient"):
     
+    # Map roles to specific icons
     role_icon_map = {
         "Patient": ft.Icons.PERSON_ADD,
         "Admin": ft.Icons.ADMIN_PANEL_SETTINGS,
@@ -13,6 +14,7 @@ def LoginPage(page: ft.Page, role_param="Patient"):
         "Staff": ft.Icons.BADGE
     }
     
+    # Simple descriptions for each role
     role_desc_map = {
         "Patient": "Login to access your personal health records",
         "Admin": "Manage system users, configuration, and logs",
@@ -22,19 +24,21 @@ def LoginPage(page: ft.Page, role_param="Patient"):
         "Staff": "Assist patients and search records"
     }
 
+    # Get the icon and description based on the role
     current_icon = role_icon_map.get(role_param, ft.Icons.PERSON)
     current_desc = role_desc_map.get(role_param, "Login to your account")
     
+    # Switch between light and dark mode
     def toggle_theme(e):
         page.theme_mode = ft.ThemeMode.DARK if page.theme_mode == ft.ThemeMode.LIGHT else ft.ThemeMode.LIGHT
         e.control.icon = ft.Icons.LIGHT_MODE if page.theme_mode == ft.ThemeMode.DARK else ft.Icons.DARK_MODE
         page.update()
 
-    # Sizes for input fields
+    # --- SIZES ---
     INPUT_WIDTH_LOGIN = 320
     INPUT_WIDTH_SIGNUP = 450 
 
-    # Helper for consistent text fields
+    # Helper function to make text fields look consistent
     def create_field(label, icon=None, password=False, width=None):
         return ft.TextField(
             label=label,
@@ -43,21 +47,23 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             height=45,
             text_size=13,
             border_color="outline",
-            bgcolor="surface",
+            bgcolor="surface", # Input background stays distinct (white/black)
             password=password,
             can_reveal_password=password,
             content_padding=10,
             focused_border_color="primary"
         )
 
-    # --- LOGIN FORM ---
+    # --- LOGIN INPUTS ---
     login_user = create_field("Username", ft.Icons.PERSON, width=INPUT_WIDTH_LOGIN)
     login_pass = create_field("Password", ft.Icons.LOCK, password=True, width=INPUT_WIDTH_LOGIN)
     login_error = ft.Text(color="error", size=12, text_align="center")
 
+    # Handle the login button click
     def handle_login(e):
         user = authenticate_user(login_user.value, login_pass.value)
         if user:
+            # Check if they are logging into the correct role
             if user['role'] != role_param and user['role'] != 'Admin':
                 login_error.value = f"Access Denied. You are not a {role_param}."
                 page.update()
@@ -68,7 +74,7 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             login_error.value = "Invalid Username or Password"
             page.update()
 
-    # --- SIGNUP FORM ---
+    # --- SIGNUP INPUTS ---
     su_first = create_field("First Name", width=INPUT_WIDTH_SIGNUP)
     su_last = create_field("Last Name", width=INPUT_WIDTH_SIGNUP)
     su_email = create_field("Email Address", ft.Icons.EMAIL_OUTLINED, width=INPUT_WIDTH_SIGNUP)
@@ -82,6 +88,7 @@ def LoginPage(page: ft.Page, role_param="Patient"):
     su_error = ft.Text(color="error", size=12, text_align="center")
     su_success = ft.Text(color="primary", size=12, text_align="center")
 
+    # Handle account creation
     def handle_signup(e):
         # Basic validation
         if not all([su_first.value, su_last.value, su_email.value, su_phone.value, su_user.value, su_pass.value]):
@@ -97,7 +104,7 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             page.update()
             return
 
-        # Save to DB
+        # Save to database
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -114,7 +121,7 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             su_error.value = "Username already exists."
         page.update()
 
-    # --- TOP LEFT BACK BUTTON ---
+    # --- NAVIGATION ---
     back_btn = ft.TextButton(
         "Back to Home", 
         icon=ft.Icons.ARROW_BACK, 
@@ -122,30 +129,32 @@ def LoginPage(page: ft.Page, role_param="Patient"):
         on_click=lambda _: page.go("/")
     )
 
-    # Container that animates when switching between login/signup
+    # Main container for the form
     main_card_container = ft.Container(
         padding=35,
         width=420, 
         animate=ft.Animation(300, "easeOut") 
     )
 
+    # Switch view functions
     def switch_to_signup(e):
         back_btn.text = "Back to Login"
         back_btn.on_click = lambda _: switch_to_login(None)
-        main_card_container.width = 550 # Widen for signup
+        main_card_container.width = 550 
         render_signup()
 
     def switch_to_login(e):
         back_btn.text = "Back to Home"
         back_btn.on_click = lambda _: page.go("/")
-        main_card_container.width = 420 # Shrink for login
+        main_card_container.width = 420 
         render_login()
 
-    # --- RENDER FUNCTIONS ---
+    # --- LAYOUT BUILDERS ---
     form_container = ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0)
 
     def render_login():
         demo_text = ""
+        # Show demo credentials based on role
         if role_param == "Admin": demo_text = "admin / admin123"
         elif role_param == "Pharmacist": demo_text = "pharm / pharm123"
         elif role_param == "Inventory": demo_text = "inv / inv123"
@@ -205,8 +214,9 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             ft.Text("Personal Information", size=13, weight="bold", color="onSurfaceVariant"),
             ft.Container(height=10),
             
+            # First and Last name on separate rows now
             su_first, 
-            ft.Container(height=8), 
+            ft.Container(height=8),
             su_last,
             
             ft.Container(height=8),
@@ -245,16 +255,19 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             su_error,
             su_success,
             
-            ft.Container(height=25), # Bottom space
+            ft.Container(height=15),
         ]
         main_card_container.content = form_container
         page.update()
 
+    # Start with login view
     render_login()
 
+    # --- MAIN PAGE STRUCTURE ---
     return ft.Column(
         expand=True,
         controls=[
+            # Top Bar
             ft.Container(
                 padding=ft.padding.symmetric(horizontal=20, vertical=15),
                 content=ft.Row([
@@ -263,14 +276,17 @@ def LoginPage(page: ft.Page, role_param="Patient"):
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
             ),
 
+            # Center Card Container
             ft.Container(
                 expand=True,
                 alignment=ft.alignment.center, 
                 padding=ft.padding.only(bottom=50),
                 content=ft.Card(
-                    elevation=5,
-                    surface_tint_color="surface",
-                    color="surface",
+                    elevation=10,
+                    # This color (surfaceVariant) makes it GREY-ish
+                    color="surfaceVariant", 
+                    # Slight tint to make it pop in dark mode
+                    surface_tint_color="primary",
                     shape=ft.RoundedRectangleBorder(radius=12),
                     content=main_card_container 
                 ),

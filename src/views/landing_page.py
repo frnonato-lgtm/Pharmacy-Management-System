@@ -2,29 +2,28 @@ import flet as ft
 
 def LandingPage(page: ft.Page):
     
-    # Go to login page when a role is clicked
     def select_role(role_name):
         page.go(f"/login/{role_name}")
 
-    # Toggle dark mode
     def toggle_theme(e):
         page.theme_mode = ft.ThemeMode.DARK if page.theme_mode == ft.ThemeMode.LIGHT else ft.ThemeMode.LIGHT
         e.control.icon = ft.Icons.LIGHT_MODE if page.theme_mode == ft.ThemeMode.DARK else ft.Icons.DARK_MODE
         page.update()
 
-    # Helper function to create the role buttons
+    # The role cards
     def create_role_card(icon, label, role_key):
         return ft.Container(
             content=ft.Column([
                 ft.Icon(icon, size=45, color="primary"),
-                ft.Text(label, weight="bold", size=13, text_align="center", color="onSurfaceVariant"),
+                # Changed color to onSurface so it is visible in dark mode
+                ft.Text(label, weight="bold", size=13, text_align="center", color="onSurface"),
             ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             width=160, 
             height=130,
             bgcolor="surfaceVariant",
             border_radius=12,
             padding=10,
-            ink=True, # Add click ripple effect
+            ink=True,
             on_click=lambda _: select_role(role_key),
             shadow=ft.BoxShadow(spread_radius=0, blur_radius=5, color=ft.Colors.with_opacity(0.1, ft.Colors.SHADOW), offset=ft.Offset(2, 2)),
             border=ft.border.all(1, ft.Colors.with_opacity(0.1, "outline")) 
@@ -35,11 +34,11 @@ def LandingPage(page: ft.Page):
         spacing=0,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            # The green header section
+            # Header
             ft.Container(
                 width=float("inf"),
                 height=250,
-                bgcolor="primary",
+                bgcolor="primaryContainer", # Use container color for better contrast
                 padding=20,
                 alignment=ft.alignment.center,
                 content=ft.Stack([
@@ -47,25 +46,27 @@ def LandingPage(page: ft.Page):
                     ft.Container(
                         alignment=ft.alignment.center,
                         content=ft.Column([
-                            ft.Icon(name=ft.Icons.LOCAL_PHARMACY, size=70, color="onPrimary"),
-                            ft.Text("Kaputt Kommando's", size=36, weight="bold", color="onPrimary", text_align="center"),
+                            ft.Icon(name=ft.Icons.LOCAL_PHARMACY, size=70, color="onPrimaryContainer"),
+                            ft.Text("Kaputt Kommando's", size=36, weight="bold", color="onPrimaryContainer", text_align="center"),
+                            # Fixed color visibility
                             ft.Text("Pharmacy Management System", size=18, color="onPrimaryContainer", weight="w500", text_align="center"),
-                            ft.Text("Today Health is Caring • For Future Start With Your Health", size=12, italic=True, color="onPrimary", text_align="center"),
+                            ft.Text("Today Health is Caring • For Future Start With Your Health", size=12, italic=True, color="onPrimaryContainer", text_align="center"),
                         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
                     ),
-                    # Theme toggle button
+                    # Theme button
                     ft.Container(
                         alignment=ft.alignment.top_right,
-                        content=ft.IconButton(ft.Icons.DARK_MODE, on_click=toggle_theme, icon_color="onPrimary", tooltip="Toggle Theme")
+                        content=ft.IconButton(ft.Icons.DARK_MODE, on_click=toggle_theme, icon_color="onPrimaryContainer", tooltip="Toggle Theme")
                     )
                 ])
             ),
 
             ft.Container(height=40),
-            ft.Text("Select your Role to Login", size=22, weight="bold", color="onSurface"),
+            # Fixed text color
+            ft.Text("Select your Role to Login", size=22, weight="bold", color="onBackground"),
             ft.Container(height=20),
 
-            # The grid of buttons
+            # Grid
             ft.Column(
                 spacing=20,
                 controls=[
