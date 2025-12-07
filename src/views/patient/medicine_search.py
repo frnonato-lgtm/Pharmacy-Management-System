@@ -1,10 +1,18 @@
-"""Medicine search and browse view."""
+"""Medicine search and browse view with add to cart functionality."""
 
 import flet as ft
+from state import AppState
 from services.database import get_db_connection
 
 def MedicineSearch():
-    """Medicine search and browse view."""
+    """Medicine search and browse view with cart integration."""
+    
+    # Get current logged-in user
+    user = AppState.get_user()
+    if not user:
+        return ft.Text("Please log in first", color="error")
+    
+    user_id = user['id']
     
     search_field = ft.TextField(
         hint_text="Search medicines by name...",
@@ -18,8 +26,17 @@ def MedicineSearch():
         options=[
             ft.dropdown.Option("All"),
             ft.dropdown.Option("Pain Relief"),
-            ft.dropdown.Option("Antibiotic"),
-            ft.dropdown.Option("Supplement"),
+            ft.dropdown.Option("Cough & Cold"),
+            ft.dropdown.Option("Antibiotics"),
+            ft.dropdown.Option("Maintenance"),
+            ft.dropdown.Option("Diabetes"),
+            ft.dropdown.Option("Heart Health"),
+            ft.dropdown.Option("Vitamins"),
+            ft.dropdown.Option("Antacid"),
+            ft.dropdown.Option("Antidiarrheal"),
+            ft.dropdown.Option("Antispasmodic"),
+            ft.dropdown.Option("Probiotics"),
+            ft.dropdown.Option("Antinausea"),
         ],
         value="All",
         width=200,
@@ -27,7 +44,118 @@ def MedicineSearch():
     
     results_container = ft.Column(spacing=10)
     
+    def show_snackbar(e, message, error=False):
+        """Show snackbar notification."""
+        e.page.snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            bgcolor="error" if error else "primary",
+        )
+        e.page.snack_bar.open = True
+        e.page.update()
+    
+    def add_to_cart(medicine_id, medicine_name, e):
+        """Add medicine to cart."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if cart table exists
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS cart (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    patient_id INTEGER NOT NULL,
+                    medicine_id INTEGER NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (patient_id) REFERENCES users(id),
+                    FOREIGN KEY (medicine_id) REFERENCES medicines(id)
+                )
+            """)
+            
+            # Check if item already in cart
+            cursor.execute("""
+                SELECT id, quantity FROM cart 
+                WHERE patient_id = ? AND medicine_id = ?
+            """, (user_id, medicine_id))
+            
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update quantity
+                cursor.execute("""
+                    UPDATE cart 
+                    SET quantity = quantity + 1 
+                    WHERE id = ?
+                """, (existing[0],))
+                show_snackbar(e, f"Updated {medicine_name} quantity in cart")
+            else:
+                # Add new item
+                cursor.execute("""
+                    INSERT INTO cart (patient_id, medicine_id, quantity)
+                    VALUES (?, ?, 1)
+                """, (user_id, medicine_id))
+                show_snackbar(e, f"Added {medicine_name} to cart")
+            
+            conn.commit()
+            
+        except Exception as ex:
+            show_snackbar(e, f"Failed to add to cart: {str(ex)}", error=True)
+        finally:
+            conn.close()
+    
+    def view_medicine_details(med, e):
+        """Show medicine details dialog."""
+        dialog = ft.AlertDialog(
+            title=ft.Text(med['name']),
+            content=ft.Column([
+                ft.Row([
+                    ft.Text("Category:", weight="bold", width=100),
+                    ft.Text(med['category']),
+                ]),
+                ft.Row([
+                    ft.Text("Price:", weight="bold", width=100),
+                    ft.Text(f"₱ {med['price']:.2f}", color="primary"),
+                ]),
+                ft.Row([
+                    ft.Text("Stock:", weight="bold", width=100),
+                    ft.Text(str(med['stock'])),
+                ]),
+                ft.Row([
+                    ft.Text("Supplier:", weight="bold", width=100),
+                    ft.Text(med['supplier']),
+                ]),
+                ft.Row([
+                    ft.Text("Expiry:", weight="bold", width=100),
+                    ft.Text(med['expiry_date']),
+                ]),
+            ], spacing=10, tight=True),
+            actions=[
+                ft.TextButton("Close", on_click=lambda e: close_dialog(e)),
+                ft.ElevatedButton(
+                    "Add to Cart",
+                    icon=ft.Icons.ADD_SHOPPING_CART,
+                    bgcolor="primary",
+                    color="onPrimary",
+                    on_click=lambda e: [
+                        add_to_cart(med['id'], med['name'], e),
+                        close_dialog(e)
+                    ],
+                    disabled=med['stock'] <= 0
+                ),
+            ],
+        )
+        
+        e.page.dialog = dialog
+        dialog.open = True
+        e.page.update()
+    
+    def close_dialog(e):
+        """Close the dialog."""
+        e.page.dialog.open = False
+        e.page.update()
+    
     def create_medicine_card(med):
+        """Create medicine card widget."""
         return ft.Container(
             content=ft.Row([
                 # Medicine image placeholder
@@ -59,7 +187,7 @@ def MedicineSearch():
                     ], spacing=10),
                     ft.Text(f"Expires: {med['expiry_date']}", size=11, color="outline", italic=True),
                 ], spacing=5, expand=True),
-                # Add to cart button
+                # Action buttons
                 ft.Column([
                     ft.IconButton(
                         icon=ft.Icons.ADD_SHOPPING_CART,
@@ -67,11 +195,13 @@ def MedicineSearch():
                         bgcolor="primary",
                         disabled=med['stock'] <= 0,
                         tooltip="Add to Cart",
+                        on_click=lambda e, m_id=med['id'], m_name=med['name']: add_to_cart(m_id, m_name, e)
                     ),
                     ft.IconButton(
                         icon=ft.Icons.INFO_OUTLINE,
                         icon_color="primary",
                         tooltip="View Details",
+                        on_click=lambda e, m=med: view_medicine_details(m, e)
                     ),
                 ], spacing=5),
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=15),
@@ -82,6 +212,7 @@ def MedicineSearch():
         )
     
     def load_medicines(e=None):
+        """Load medicines from database based on search/filter."""
         query = search_field.value.lower() if search_field.value else ""
         category = category_dropdown.value
         
@@ -99,14 +230,29 @@ def MedicineSearch():
             sql += " AND category = ?"
             params.append(category)
         
+        sql += " ORDER BY name"
+        
         cursor.execute(sql, params)
         medicines = cursor.fetchall()
         conn.close()
         
+        # Convert to dict for easier access
+        medicine_dicts = []
+        for med in medicines:
+            medicine_dicts.append({
+                'id': med[0],
+                'name': med[1],
+                'category': med[2],
+                'price': med[3],
+                'stock': med[4],
+                'expiry_date': med[5],
+                'supplier': med[6],
+            })
+        
         results_container.controls.clear()
         
-        if medicines:
-            for med in medicines:
+        if medicine_dicts:
+            for med in medicine_dicts:
                 results_container.controls.append(create_medicine_card(med))
         else:
             results_container.controls.append(
@@ -114,7 +260,7 @@ def MedicineSearch():
                     content=ft.Column([
                         ft.Icon(ft.Icons.SEARCH_OFF, size=80, color="outline"),
                         ft.Text("No medicines found", size=18, color="outline"),
-                        ft.Text("Try a different search term", size=14, color="outline"),
+                        ft.Text("Try a different search term or category", size=14, color="outline"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                     padding=50,
                     alignment=ft.alignment.center,

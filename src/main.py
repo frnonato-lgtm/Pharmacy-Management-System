@@ -13,6 +13,7 @@ from views.patient.medicine_search import MedicineSearch
 from views.patient.cart_view import CartView
 from views.patient.orders_view import OrdersView
 from views.patient.profile_view import ProfileView
+from views.patient.patient_prescriptions import PrescriptionsView as PatientPrescriptionsView
 
 from views.admin.admin_dashboard import AdminDashboard
 from views.admin.user_management import UserManagement
@@ -24,7 +25,7 @@ from views.inventory.inventory_dashboard import InventoryDashboard
 from views.inventory.manage_stock import ManageStock
 
 from views.pharmacist.pharmacist_dashboard import PharmacistDashboard
-from views.pharmacist.prescriptions_view import PrescriptionsView
+from views.pharmacist.prescriptions_view import PrescriptionsView as PharmacistPrescriptionsView
 from views.pharmacist.prescription_detail import PrescriptionDetailView  
 from views.pharmacist.reports_view import ReportsView as PharmacistReportsView  
 from views.pharmacist.medicine_search import PharmacistMedicineSearch
@@ -103,9 +104,10 @@ def main(page: ft.Page):
             elif troute == "/patient/cart": content = CartView()
             elif troute == "/patient/orders": content = OrdersView()
             elif troute == "/patient/profile": content = ProfileView()
+            elif troute == "/patient/prescriptions" : content = PatientPrescriptionsView()
 
             # 3. Pharmacist Views
-            elif troute == "/pharmacist/prescriptions": content = PrescriptionsView()
+            elif troute == "/pharmacist/prescriptions": content = PharmacistPrescriptionsView()
             elif troute == "/pharmacist/reports": content = PharmacistReportsView() 
             elif troute == "/pharmacist/medicines": content = PharmacistMedicineSearch()
             elif troute.startswith("/pharmacist/prescription/"):

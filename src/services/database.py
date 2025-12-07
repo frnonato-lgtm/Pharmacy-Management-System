@@ -105,7 +105,6 @@ def init_db():
             ('inv', 'inv123', 'Inventory', 'Kenji Nathaniel', 'David'),
             ('bill', 'bill123', 'Billing', 'Francis Gabriel', 'Nonato'),
             ('staff', 'staff123', 'Staff', 'Staff Member', ''),
-            ('pat', 'pat123', 'Patient', 'John', 'Doe')
         ]
         cursor.executemany("""
             INSERT INTO users (username, password, role, full_name, last_name) 
