@@ -5,37 +5,40 @@ from datetime import datetime
 def ManageStock():
     """Page to Add, Update, Delete, and Search Medicines."""
     
-    # --- STATE VARIABLES ---
+    # Variable to track if we are editing an existing medicine or adding a new one
+    # If None, we are adding. If it has a number, we are editing that ID.
     selected_medicine_id = None 
     
-    # --- HELPER: Create Styled Inputs ---
-    # Note: TextFields support 'height', but Dropdowns often don't in specific Flet versions.
+    # --- HELPER FUNCTIONS ---
+    
+    # I made this function so I don't have to type the same style properties over and over for every text field
     def create_input(label, icon=None, numeric=False, expand=False):
         return ft.TextField(
             label=label,
             prefix_icon=icon,
+            # If numeric is True, show number keyboard, otherwise text
             keyboard_type=ft.KeyboardType.NUMBER if numeric else ft.KeyboardType.TEXT,
             height=45, 
             text_size=13,
             border_color="outline",
             focused_border_color="primary",
             content_padding=10,
-            expand=expand
+            expand=expand # This lets the field stretch if needed
         )
 
-    # --- GUI COMPONENTS ---
+    # --- UI COMPONENTS ---
     
-    # 1. Search and Filter Inputs (Top Bar)
+    # Search bar at the top
     search_txt = ft.TextField(
         hint_text="Search medicine name...",
         prefix_icon=ft.Icons.SEARCH,
         expand=True,
         height=45,
         content_padding=10,
-        on_submit=lambda e: load_data() 
+        on_submit=lambda e: load_data() # Search when Enter is pressed
     )
     
-    # FIX: Removed 'height' property from Dropdown
+    # Dropdown to filter by category
     category_filter = ft.Dropdown(
         label="Category",
         options=[
@@ -54,10 +57,10 @@ def ManageStock():
         value="All",
         width=200,
         content_padding=10,
-        on_change=lambda e: load_data() 
+        on_change=lambda e: load_data() # Refresh table when changed
     )
     
-    # FIX: Removed 'height' property from Dropdown
+    # Dropdown to filter by stock level
     stock_filter = ft.Dropdown(
         label="Stock Status",
         options=[
@@ -72,26 +75,27 @@ def ManageStock():
         on_change=lambda e: load_data()
     )
 
-    # 2. Input Fields for Add/Edit Dialog
+    # --- INPUT FIELDS FOR THE POPUP DIALOG ---
+    
     name_input = create_input("Medicine Name", ft.Icons.MEDICATION)
     
-    # FIX: Removed 'height' property from Dropdown
+    # For the category inside the Add/Edit form, we copy options from the filter but remove "All"
     category_input = ft.Dropdown(
         label="Category",
-        options=category_filter.options[1:], # Use same options as filter (exclude "All")
+        options=category_filter.options[1:], 
         content_padding=10,
         border_color="outline",
         focused_border_color="primary"
     )
     
-    # These two will share a row
+    # Price and Stock inputs (will be side-by-side)
     price_input = create_input("Price (PHP)", None, numeric=True, expand=True)
     stock_input = create_input("Stock Qty", None, numeric=True, expand=True)
     
     expiry_input = create_input("Expiry (YYYY-MM-DD)", ft.Icons.CALENDAR_TODAY)
     supplier_input = create_input("Supplier", ft.Icons.LOCAL_SHIPPING)
 
-    # 3. The Data Table
+    # The main table to show data
     stock_table = ft.DataTable(
         border=ft.border.all(1, "outline"),
         border_radius=10,
@@ -110,16 +114,18 @@ def ManageStock():
         rows=[]
     )
 
-    # --- LOGIC FUNCTIONS ---
+    # --- APP LOGIC ---
 
+    # This function connects to the DB and fills the table based on filters
     def load_data():
-        """Fetch medicines from DB based on filters."""
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Base query
         query = "SELECT * FROM medicines WHERE 1=1"
         params = []
 
+        # Add filters if they are set
         if search_txt.value:
             query += " AND name LIKE ?"
             params.append(f"%{search_txt.value}%")
@@ -135,16 +141,19 @@ def ManageStock():
         elif stock_filter.value == "Good Stock":
             query += " AND stock >= 10"
 
-        # Sort by ID Ascending
+        # Make sure it's sorted by ID (1, 2, 3...)
         query += " ORDER BY id ASC"
 
         cursor.execute(query, params)
         meds = cursor.fetchall()
         conn.close()
 
+        # Clear old rows
         stock_table.rows.clear()
         
+        # Loop through data and add rows to the table
         for m in meds:
+            # Color code the stock number: Red = Empty, Orange = Low, Blue = Good
             if m['stock'] == 0:
                 stock_color = "error"
             elif m['stock'] < 10:
@@ -161,6 +170,7 @@ def ManageStock():
                     ft.DataCell(ft.Text(str(m['stock']), color=stock_color, weight="bold")),
                     ft.DataCell(ft.Text(m['expiry_date'])),
                     ft.DataCell(ft.Text(m['supplier'] or "N/A")),
+                    # Add Edit and Delete buttons for each row
                     ft.DataCell(ft.Row([
                         ft.IconButton(
                             icon=ft.Icons.EDIT, 
@@ -178,15 +188,16 @@ def ManageStock():
                 ])
             )
         
-        # Safe update check
+        # Update the UI only if the table is visible
         if stock_table.page:
             stock_table.update()
 
+    # Prepares the dialog for adding a NEW medicine
     def open_add_dialog(e):
         nonlocal selected_medicine_id
-        selected_medicine_id = None 
+        selected_medicine_id = None # None means we are adding, not editing
         
-        # Clear fields
+        # Clear all input fields
         name_input.value = ""
         category_input.value = None
         price_input.value = ""
@@ -198,11 +209,12 @@ def ManageStock():
         dialog.open = True
         e.page.update()
 
+    # Prepares the dialog for EDITING an existing medicine
     def open_edit_dialog(med):
         nonlocal selected_medicine_id
-        selected_medicine_id = med['id'] 
+        selected_medicine_id = med['id'] # Remember which ID we are editing
         
-        # Fill fields
+        # Fill the boxes with the current data
         name_input.value = med['name']
         category_input.value = med['category']
         price_input.value = str(med['price'])
@@ -215,7 +227,9 @@ def ManageStock():
         if name_input.page:
             name_input.page.update()
 
+    # Saves the data to the database
     def save_medicine(e):
+        # Basic check to make sure fields aren't empty
         if not name_input.value or not price_input.value or not stock_input.value:
             e.page.snack_bar = ft.SnackBar(ft.Text("Please fill in Name, Price, and Stock!"), bgcolor="error")
             e.page.snack_bar.open = True
@@ -227,7 +241,7 @@ def ManageStock():
             cursor = conn.cursor()
 
             if selected_medicine_id is None:
-                # Add New
+                # INSERT new record
                 cursor.execute("""
                     INSERT INTO medicines (name, category, price, stock, expiry_date, supplier) 
                     VALUES (?, ?, ?, ?, ?, ?)
@@ -241,7 +255,7 @@ def ManageStock():
                 ))
                 msg = "Medicine Added Successfully!"
             else:
-                # Update
+                # UPDATE existing record
                 cursor.execute("""
                     UPDATE medicines 
                     SET name=?, category=?, price=?, stock=?, expiry_date=?, supplier=?
@@ -260,6 +274,7 @@ def ManageStock():
             conn.commit()
             conn.close()
             
+            # Close popup and refresh the list
             dialog.open = False
             load_data()
             
@@ -272,6 +287,7 @@ def ManageStock():
             e.page.snack_bar.open = True
             e.page.update()
 
+    # Shows a confirmation popup before deleting
     def open_delete_dialog(e, med_id):
         def confirm_delete(e):
             conn = get_db_connection()
@@ -297,17 +313,18 @@ def ManageStock():
         del_dialog.open = True
         e.page.update()
 
-    # --- DIALOG LAYOUT ---
+    # --- DEFINE DIALOGS ---
+    
+    # The main form dialog
     dialog = ft.AlertDialog(
         content=ft.Container(
             width=450,
-            # Use Column to stack items vertically
+            # Use Column to stack fields, and Row to put Price/Stock side-by-side
             content=ft.Column([
                 name_input,
                 ft.Container(height=5),
                 category_input,
                 ft.Container(height=5),
-                # Row for Price and Stock to sit side-by-side
                 ft.Row([price_input, stock_input], spacing=15),
                 ft.Container(height=5),
                 expiry_input,
@@ -321,11 +338,12 @@ def ManageStock():
         ]
     )
 
-    # --- INITIAL LOAD ---
+    # Run this once when page loads to fill the table
     load_data()
 
     # --- MAIN PAGE LAYOUT ---
     return ft.Column([
+        # Header Row
         ft.Row([
             ft.Text("Stock Management", size=28, weight="bold"),
             ft.Row([
@@ -336,6 +354,7 @@ def ManageStock():
         
         ft.Container(height=10),
         
+        # Filter Bar
         ft.Container(
             content=ft.Row([
                 search_txt,
@@ -350,10 +369,12 @@ def ManageStock():
         
         ft.Container(height=20),
         
+        # Table Container (with horizontal scrolling enabled)
         ft.Column([
             ft.Row([stock_table], scroll=ft.ScrollMode.AUTO)
         ], scroll=ft.ScrollMode.AUTO, expand=True),
         
+        # Include dialogs here so they can be shown
         dialog 
         
     ], scroll=ft.ScrollMode.AUTO, expand=True)
