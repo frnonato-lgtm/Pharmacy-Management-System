@@ -1,4 +1,4 @@
-"""Invoice detail view - Shows complete invoice information."""
+"""Invoice detail view - Shows complete of invoice information."""
 
 import flet as ft
 from services.database import get_db_connection
