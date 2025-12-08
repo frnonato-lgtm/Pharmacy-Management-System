@@ -9,7 +9,7 @@ def HelpDeskView():
     
     user = AppState.get_user()
     
-    # Helper: Create FAQ item
+    # Helper to make a question that opens up
     def create_faq(question, answer):
         return ft.ExpansionTile(
             title=ft.Text(question, size=14, weight="bold"),
@@ -25,7 +25,7 @@ def HelpDeskView():
             ],
         )
     
-    # Helper: Create quick guide card
+    # Helper to make a step-by-step guide
     def create_guide_card(title, description, icon, steps):
         return ft.Container(
             content=ft.Column([
@@ -56,7 +56,7 @@ def HelpDeskView():
             bgcolor="surface",
         )
     
-    # Helper: Contact card
+    # Helper for the contact info boxes
     def create_contact_card(role, contact_info, icon, color):
         return ft.Container(
             content=ft.Column([
@@ -72,16 +72,16 @@ def HelpDeskView():
         )
     
     return ft.Column([
+        # Header - BACK BUTTON REMOVED
         NavigationHeader(
             "Help Desk",
             "Quick guides and frequently asked questions",
-            show_back=True,
-            back_route="/dashboard"
+            show_back=False, # Set to False as requested
         ),
         
         ft.Container(
             content=ft.Column([
-                # Welcome section
+                # Welcome Banner
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.SUPPORT_AGENT, color="primary", size=48),
@@ -102,7 +102,7 @@ def HelpDeskView():
                 
                 ft.Container(height=30),
                 
-                # Quick Guides
+                # --- GUIDES SECTION ---
                 ft.Text("📚 Quick Guides", size=22, weight="bold"),
                 
                 create_guide_card(
@@ -147,7 +147,7 @@ def HelpDeskView():
                 
                 ft.Container(height=30),
                 
-                # FAQs
+                # --- FAQ SECTION ---
                 ft.Text("❓ Frequently Asked Questions", size=22, weight="bold"),
                 
                 ft.Container(
@@ -190,7 +190,7 @@ def HelpDeskView():
                 
                 ft.Container(height=30),
                 
-                # Contact Information
+                # --- CONTACT SECTION ---
                 ft.Text("📞 Need More Help?", size=22, weight="bold"),
                 
                 ft.Row([
@@ -216,7 +216,7 @@ def HelpDeskView():
                 
                 ft.Container(height=20),
                 
-                # System info
+                # Footer info
                 ft.Container(
                     content=ft.Column([
                         ft.Row([

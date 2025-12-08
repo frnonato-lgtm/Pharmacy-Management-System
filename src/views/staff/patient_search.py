@@ -7,8 +7,10 @@ from components.navigation_header import NavigationHeader
 def StaffPatientSearch():
     """Search for patient records with detailed information."""
     
+    # Container for results
     results_container = ft.Column(spacing=10)
     
+    # The search input box
     search_field = ft.TextField(
         label="Search by Name or Phone",
         hint_text="Enter patient name or phone number...",
@@ -18,11 +20,11 @@ def StaffPatientSearch():
         autofocus=True,
     )
     
+    # Function to create the visual card for a patient
     def create_patient_card(patient):
-        """Create detailed patient information card."""
         return ft.Container(
             content=ft.Column([
-                # Header
+                # Header with icon and name
                 ft.Row([
                     ft.Container(
                         width=60,
@@ -35,6 +37,7 @@ def StaffPatientSearch():
                     ft.Column([
                         ft.Text(patient['full_name'], size=18, weight="bold"),
                         ft.Text(f"Patient ID: {patient['id']}", size=12, color="outline"),
+                        # Badge
                         ft.Container(
                             content=ft.Text("Patient", size=11, color="white", weight="bold"),
                             bgcolor="primary",
@@ -52,7 +55,7 @@ def StaffPatientSearch():
                 
                 ft.Divider(height=10),
                 
-                # Contact information
+                # Info Grid
                 ft.Column([
                     ft.Row([
                         ft.Icon(ft.Icons.PHONE, size=20, color="secondary"),
@@ -82,7 +85,7 @@ def StaffPatientSearch():
                 
                 ft.Divider(height=10),
                 
-                # Quick actions
+                # Buttons
                 ft.Row([
                     ft.OutlinedButton(
                         "View Full Record",
@@ -102,27 +105,23 @@ def StaffPatientSearch():
             bgcolor="surface",
         )
     
+    # Navigation helpers
     def view_details(e, patient_id):
-        """Navigate to patient detail view."""
         e.page.go(f"/staff/patient/{patient_id}")
     
     def view_prescriptions(e, patient_id):
-        """Show patient prescriptions."""
-        e.page.snack_bar = ft.SnackBar(
-            content=ft.Text("Viewing prescriptions..."),
-            bgcolor="primary",
-        )
+        e.page.snack_bar = ft.SnackBar(content=ft.Text("Viewing prescriptions..."), bgcolor="primary")
         e.page.snack_bar.open = True
         e.page.update()
-        # Navigate to prescriptions view
         e.page.go(f"/staff/patient/{patient_id}/prescriptions")
     
+    # Logic to run the search against the DB
     def perform_search(e):
-        """Search for patients."""
         results_container.controls.clear()
         
         term = search_field.value
         if not term:
+            # Show "Enter text" message if empty
             results_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -139,7 +138,7 @@ def StaffPatientSearch():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Search by name OR phone number
+        # Search query matching Name OR Phone
         cursor.execute("""
             SELECT * FROM users 
             WHERE role = 'Patient' 
@@ -151,6 +150,7 @@ def StaffPatientSearch():
         conn.close()
         
         if not rows:
+            # Show "No results" message
             results_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -164,6 +164,7 @@ def StaffPatientSearch():
                 )
             )
         else:
+            # Show results count
             results_container.controls.append(
                 ft.Text(
                     f"Found {len(rows)} patient(s)",
@@ -173,6 +174,7 @@ def StaffPatientSearch():
                 )
             )
             
+            # Make a card for each found patient
             for row in rows:
                 patient = {
                     'id': row[0],
@@ -190,17 +192,18 @@ def StaffPatientSearch():
         
         e.page.update()
     
+    # --- PAGE LAYOUT ---
     return ft.Column([
+        # Header - BACK BUTTON REMOVED
         NavigationHeader(
             "Patient Search",
             "Search and view patient records",
-            show_back=True,
-            back_route="/dashboard"
+            show_back=False, # Set to False as requested
         ),
         
         ft.Container(
             content=ft.Column([
-                # Search bar
+                # Search Bar Row
                 ft.Row([
                     search_field,
                     ft.ElevatedButton(
@@ -236,7 +239,7 @@ def StaffPatientSearch():
                 
                 ft.Container(height=20),
                 
-                # Results
+                # Where the results show up
                 results_container,
             ], spacing=0),
             padding=20,

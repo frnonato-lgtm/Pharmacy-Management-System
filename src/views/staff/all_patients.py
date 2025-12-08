@@ -9,7 +9,7 @@ def AllPatientsView():
     
     patients_container = ft.Column(spacing=10)
     
-    # Sort options
+    # Dropdown to pick how to sort the list
     sort_dropdown = ft.Dropdown(
         label="Sort By",
         options=[
@@ -22,6 +22,7 @@ def AllPatientsView():
         width=200,
     )
     
+    # Quick filter box
     search_field = ft.TextField(
         hint_text="Quick filter by name...",
         prefix_icon=ft.Icons.FILTER_LIST,
@@ -29,17 +30,17 @@ def AllPatientsView():
         expand=True,
     )
     
+    # Helper to create a single row for the list
     def create_patient_row(patient, index):
-        """Create a patient list row."""
         return ft.Container(
             content=ft.Row([
-                # Number
+                # Number count
                 ft.Container(
                     content=ft.Text(str(index + 1), size=16, weight="bold", color="primary"),
                     width=40,
                 ),
                 
-                # Avatar
+                # Avatar Icon
                 ft.Container(
                     width=50,
                     height=50,
@@ -49,13 +50,13 @@ def AllPatientsView():
                     alignment=ft.alignment.center,
                 ),
                 
-                # Patient info
+                # Name and ID
                 ft.Column([
                     ft.Text(patient['full_name'], size=15, weight="bold"),
                     ft.Text(f"ID: {patient['id']}", size=11, color="outline"),
                 ], spacing=2, expand=True),
                 
-                # Contact
+                # Contact info
                 ft.Column([
                     ft.Row([
                         ft.Icon(ft.Icons.PHONE, size=14, color="secondary"),
@@ -67,7 +68,7 @@ def AllPatientsView():
                     ], spacing=5),
                 ], spacing=3, expand=True),
                 
-                # Registration date
+                # Registration Date
                 ft.Column([
                     ft.Text("Registered", size=10, color="outline"),
                     ft.Text(
@@ -77,7 +78,7 @@ def AllPatientsView():
                     ),
                 ], spacing=2),
                 
-                # Actions
+                # Action Buttons
                 ft.Row([
                     ft.IconButton(
                         icon=ft.Icons.VISIBILITY,
@@ -99,12 +100,12 @@ def AllPatientsView():
             bgcolor="surface",
         )
     
+    # Helper to jump to search page with name pre-filled
     def search_specific(e, patient_name):
-        """Pre-fill search with patient name."""
         e.page.go(f"/staff/search?q={patient_name}")
     
+    # Function to get data from DB
     def load_patients(e=None):
-        """Load all patients from database."""
         patients_container.controls.clear()
         
         filter_term = search_field.value.lower() if search_field.value else ""
@@ -113,12 +114,14 @@ def AllPatientsView():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Build query based on sort
+        # Base query
         query = "SELECT * FROM users WHERE role = 'Patient'"
         
+        # Add filtering
         if filter_term:
             query += f" AND LOWER(full_name) LIKE '%{filter_term}%'"
         
+        # Add sorting
         if sort_by == "name_asc":
             query += " ORDER BY full_name ASC"
         elif sort_by == "name_desc":
@@ -147,7 +150,7 @@ def AllPatientsView():
             
             patients_container.controls.append(ft.Divider(height=10))
             
-            # Create patient rows
+            # Loop through rows and make UI
             for idx, row in enumerate(rows):
                 patient = {
                     'id': row[0],
@@ -159,6 +162,7 @@ def AllPatientsView():
                 }
                 patients_container.controls.append(create_patient_row(patient, idx))
         else:
+            # Empty state
             patients_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -173,23 +177,24 @@ def AllPatientsView():
         if e and hasattr(e, 'page'):
             e.page.update()
     
-    # Initial load
+    # Fake page for initial load
     class FakePage:
         def update(self): pass
         def go(self, route): pass
     load_patients(type('Event', (), {'page': FakePage()})())
     
+    # --- PAGE LAYOUT ---
     return ft.Column([
+        # Header - BACK BUTTON REMOVED
         NavigationHeader(
             "All Patients",
             "View complete list of registered patients",
-            show_back=True,
-            back_route="/dashboard"
+            show_back=False, # Set to False as requested
         ),
         
         ft.Container(
             content=ft.Column([
-                # Filters and controls
+                # Toolbar
                 ft.Row([
                     search_field,
                     sort_dropdown,
@@ -210,7 +215,7 @@ def AllPatientsView():
                 
                 ft.Container(height=10),
                 
-                # Info banner
+                # Info Box
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.INFO_OUTLINE, color="secondary", size=20),
@@ -228,7 +233,7 @@ def AllPatientsView():
                 
                 ft.Container(height=20),
                 
-                # Patients list
+                # The List
                 patients_container,
             ], spacing=0),
             padding=20,
