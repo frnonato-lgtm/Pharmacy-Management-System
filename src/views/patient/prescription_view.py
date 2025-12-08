@@ -8,9 +8,10 @@ from datetime import datetime
 def PatientPrescriptionsView():
     """View patient's own prescriptions and submit new ones."""
     
+    # 1. Get the current user
     user = AppState.get_user()
     
-    # Get patient's prescriptions
+    # 2. Get their prescription history from the DB
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -22,8 +23,9 @@ def PatientPrescriptionsView():
     prescriptions = cursor.fetchall()
     conn.close()
     
+    # Helper to make the status badge look nice
     def create_prescription_card(rx):
-        """Create prescription status card."""
+        # Choose color based on status
         status_colors = {
             "Pending": ("tertiary", ft.Icons.PENDING_ACTIONS),
             "Approved": ("primary", ft.Icons.CHECK_CIRCLE),
@@ -49,6 +51,7 @@ def PatientPrescriptionsView():
                         border_radius=15,
                     ),
                 ]),
+                # Show notes only if they exist
                 ft.Divider(height=10) if rx['notes'] else ft.Container(),
                 ft.Text(rx['notes'], size=13, italic=True) if rx['notes'] else ft.Container(),
             ], spacing=8),
@@ -58,65 +61,47 @@ def PatientPrescriptionsView():
             bgcolor=ft.Colors.with_opacity(0.05, color),
         )
     
+    # --- THIS IS THE POPUP FORM LOGIC ---
     def submit_prescription_dialog(e):
-        """Open prescription submission form."""
+        print("Submit button clicked!") 
         
-        doctor_name = ft.TextField(
-            label="Doctor's Name *",
-            hint_text="Dr. Juan Dela Cruz",
-            width=300,
-        )
+        # Define a consistent style for all inputs
+        # I removed the hint_text here like you asked
+        def create_input(label, multiline=False):
+            return ft.TextField(
+                label=label,
+                multiline=multiline,
+                width=None, # Allow it to fill the container
+                expand=True,
+                border_color="outline",
+                text_size=14
+            )
+
+        # Create the inputs
+        doctor_name = create_input("Doctor's Name *")
+        medicine_name = create_input("Medicine Prescribed *")
+        dosage = create_input("Dosage Instructions *", multiline=True)
+        duration = create_input("Duration *")
+        additional_notes = create_input("Additional Notes", multiline=True)
         
-        medicine_name = ft.TextField(
-            label="Medicine Prescribed *",
-            hint_text="Amoxicillin 500mg",
-            width=300,
-        )
-        
-        dosage = ft.TextField(
-            label="Dosage Instructions *",
-            hint_text="1 tablet 3 times daily",
-            multiline=True,
-            min_lines=2,
-            width=300,
-        )
-        
-        duration = ft.TextField(
-            label="Duration *",
-            hint_text="7 days",
-            width=300,
-        )
-        
-        additional_notes = ft.TextField(
-            label="Additional Notes (Optional)",
-            hint_text="Allergies, special instructions, etc.",
-            multiline=True,
-            min_lines=3,
-            width=300,
-        )
-        
+        # Error message label (hidden by default)
         error_text = ft.Text("", color="error", size=12)
         
+        # What happens when they click "Submit" inside the popup
         def save_prescription(dialog_e):
-            """Save prescription to database."""
-            error_text.value = ""
-            
-            # Validate
+            # Basic validation
             if not all([doctor_name.value, medicine_name.value, dosage.value, duration.value]):
-                error_text.value = "Please fill in all required fields"
-                e.page.update()
+                error_text.value = "Please fill in all required fields!"
+                dialog_e.control.page.update()
                 return
             
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            
+            # Save to database
             try:
-                # Create notes text
-                notes_text = f"""Doctor: {doctor_name.value}
-Medicine: {medicine_name.value}
-Dosage: {dosage.value}
-Duration: {duration.value}
-{f'Notes: {additional_notes.value}' if additional_notes.value else ''}"""
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                
+                # Combine info into a notes string
+                notes_text = f"Doctor: {doctor_name.value}\nMedicine: {medicine_name.value}\nDosage: {dosage.value}\nDuration: {duration.value}\nNotes: {additional_notes.value}"
                 
                 cursor.execute("""
                     INSERT INTO prescriptions (patient_id, status, notes, created_at)
@@ -126,67 +111,77 @@ Duration: {duration.value}
                 conn.commit()
                 conn.close()
                 
-                # Success
-                prescription_dialog.open = False
-                e.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Prescription submitted successfully! Awaiting pharmacist review."),
-                    bgcolor="primary",
-                )
-                e.page.snack_bar.open = True
-                e.page.update()
+                # Close the dialog
+                dialog_e.control.page.close(prescription_form)
                 
-                # Refresh page
-                e.page.go("/patient/prescriptions")
+                # Show success snackbar
+                dialog_e.control.page.snack_bar = ft.SnackBar(
+                    content=ft.Text("Prescription submitted! Waiting for review."),
+                    bgcolor="primary"
+                )
+                dialog_e.control.page.snack_bar.open = True
+                dialog_e.control.page.update()
+                
+                # Refresh the page to show the new item
+                dialog_e.control.page.go("/patient/prescriptions")
                 
             except Exception as ex:
-                conn.rollback()
-                conn.close()
+                print(f"Error saving: {ex}")
                 error_text.value = f"Error: {str(ex)}"
-                e.page.update()
-        
-        def close_dialog(dialog_e):
-            prescription_dialog.open = False
-            e.page.update()
-        
-        prescription_dialog = ft.AlertDialog(
+                dialog_e.control.page.update()
+
+        # The actual Dialog Popup
+        # I made the width bigger (500) so it looks better
+        prescription_form = ft.AlertDialog(
+            modal=True, # Forces user to click buttons to close
             title=ft.Row([
-                ft.Icon(ft.Icons.MEDICAL_SERVICES, color="primary"),
-                ft.Text("Submit Prescription Request"),
-            ], spacing=10),
-            content=ft.Column([
-                ft.Text("Fill in your prescription details from your doctor", size=13, color="outline"),
-                ft.Divider(),
-                doctor_name,
-                medicine_name,
-                dosage,
-                duration,
-                additional_notes,
-                error_text,
-            ], spacing=15, width=350, height=500, scroll=ft.ScrollMode.AUTO),
+                ft.Icon(ft.Icons.MEDICAL_SERVICES, color="primary"), 
+                ft.Text("New Prescription")
+            ]),
+            # Using surfaceVariant makes it stand out slightly against the background
+            bgcolor="surface", 
+            shape=ft.RoundedRectangleBorder(radius=12),
+            content=ft.Container(
+                width=500, # Increased width here
+                padding=10,
+                content=ft.Column([
+                    ft.Text("Enter details from your doctor's prescription:", size=13, color="outline"),
+                    ft.Divider(height=10, color="transparent"),
+                    doctor_name,
+                    medicine_name,
+                    dosage,
+                    duration,
+                    additional_notes,
+                    error_text,
+                ], scroll=ft.ScrollMode.AUTO, tight=True)
+            ),
             actions=[
-                ft.TextButton("Cancel", on_click=close_dialog),
+                ft.TextButton("Cancel", on_click=lambda e: e.page.close(prescription_form)),
                 ft.ElevatedButton(
-                    "Submit Prescription",
-                    icon=ft.Icons.SEND,
-                    bgcolor="primary",
-                    color="onPrimary",
-                    on_click=save_prescription,
+                    "Submit", 
+                    icon=ft.Icons.SEND, 
+                    bgcolor="primary", 
+                    color="white", 
+                    on_click=save_prescription
                 ),
             ],
+            actions_padding=20,
         )
         
-        e.page.dialog = prescription_dialog
-        prescription_dialog.open = True
-        e.page.update()
-    
+        # Open it using the modern Flet way
+        e.page.open(prescription_form)
+
+    # --- MAIN PAGE LAYOUT ---
     return ft.Column([
-        # Header
+        # Header Row
         ft.Row([
             ft.Icon(ft.Icons.MEDICAL_SERVICES, color="primary", size=32),
             ft.Column([
                 ft.Text("My Prescriptions", size=28, weight="bold"),
                 ft.Text("Submit prescription requests and track their status", size=14, color="outline"),
             ], spacing=5, expand=True),
+            
+            # The Button that triggers the popup
             ft.ElevatedButton(
                 content=ft.Row([
                     ft.Icon(ft.Icons.ADD, color="white"),
@@ -194,13 +189,13 @@ Duration: {duration.value}
                 ], spacing=8),
                 bgcolor="primary",
                 style=ft.ButtonStyle(padding=15, shape=ft.RoundedRectangleBorder(radius=8)),
-                on_click=submit_prescription_dialog,
+                on_click=submit_prescription_dialog, 
             ),
         ], spacing=15),
         
         ft.Container(height=20),
         
-        # How it works info
+        # Info Box
         ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -219,21 +214,21 @@ Duration: {duration.value}
         
         ft.Container(height=20),
         
-        # Prescriptions list
+        # The List Title
+        ft.Text(f"Your Prescriptions ({len(prescriptions)})", size=20, weight="bold"),
+        ft.Container(height=10),
+        
+        # The List Logic
+        # If we have items, show them. If not, show the "Empty" placeholder.
         ft.Column([
-            ft.Text(f"Your Prescriptions ({len(prescriptions)})", size=20, weight="bold"),
-            ft.Container(height=10),
-            
-            ft.Column([
-                create_prescription_card(rx) for rx in prescriptions
-            ], spacing=10) if prescriptions else ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=80, color="outline"),
-                    ft.Text("No prescriptions yet", size=18, color="outline"),
-                    ft.Text("Submit your first prescription request above", size=14, color="outline"),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-                padding=50,
-                alignment=ft.alignment.center,
-            ),
-        ]),
+            create_prescription_card(rx) for rx in prescriptions
+        ], spacing=10) if prescriptions else ft.Container(
+            content=ft.Column([
+                ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=80, color="outline"),
+                ft.Text("No prescriptions yet", size=18, color="outline"),
+                ft.Text("Click the button above to upload one!", size=14, color="outline"),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
+            padding=50,
+            alignment=ft.alignment.center,
+        ),
     ], scroll=ft.ScrollMode.AUTO, spacing=0)
