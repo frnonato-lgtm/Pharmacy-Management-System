@@ -87,12 +87,15 @@ def AdminDashboard():
                         ft.Text(subtitle, size=11, color="outline") if subtitle else ft.Container(),
                     ], spacing=2, expand=True),
                 ], spacing=15),
-            ]),
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            ),
             padding=20,
             bgcolor="surface",
             border_radius=10,
             border=ft.border.all(1, "outlineVariant"),
             expand=True,
+            height = 140,
         )
     
     # Quick action button
