@@ -9,233 +9,149 @@ def AllPatientsView():
     
     patients_container = ft.Column(spacing=10)
     
-    # Dropdown to pick how to sort the list
+    # Dropdown to pick sorting
+    # Added border_color="primary" so it's visible in Dark Mode
     sort_dropdown = ft.Dropdown(
         label="Sort By",
         options=[
             ft.dropdown.Option("name_asc", "Name (A-Z)"),
             ft.dropdown.Option("name_desc", "Name (Z-A)"),
-            ft.dropdown.Option("recent", "Recently Registered"),
-            ft.dropdown.Option("oldest", "Oldest First"),
+            ft.dropdown.Option("newest", "Newest First"),
         ],
         value="name_asc",
         width=200,
+        border_color="primary", 
     )
     
     # Quick filter box
+    # Added border_color="primary" here too
     search_field = ft.TextField(
         hint_text="Quick filter by name...",
         prefix_icon=ft.Icons.FILTER_LIST,
-        border_color="outline",
         expand=True,
+        border_color="primary",
     )
     
-    # Helper to create a single row for the list
+    # --- ROW CREATOR ---
+    # Makes the horizontal strip for each patient
     def create_patient_row(patient, index):
         return ft.Container(
             content=ft.Row([
-                # Number count
+                # Number
+                ft.Text(f"#{index + 1}", weight="bold", width=40, color="primary"),
+                
+                # Avatar
                 ft.Container(
-                    content=ft.Text(str(index + 1), size=16, weight="bold", color="primary"),
-                    width=40,
+                    content=ft.Icon(ft.Icons.PERSON, size=20, color="onSecondaryContainer"),
+                    bgcolor="secondaryContainer", width=40, height=40, border_radius=20,
+                    alignment=ft.alignment.center
                 ),
                 
-                # Avatar Icon
-                ft.Container(
-                    width=50,
-                    height=50,
-                    bgcolor="primaryContainer",
-                    border_radius=25,
-                    content=ft.Icon(ft.Icons.PERSON, size=24, color="onPrimaryContainer"),
-                    alignment=ft.alignment.center,
-                ),
-                
-                # Name and ID
+                # Name & ID
                 ft.Column([
-                    ft.Text(patient['full_name'], size=15, weight="bold"),
+                    ft.Text(patient['full_name'], weight="bold", size=14),
                     ft.Text(f"ID: {patient['id']}", size=11, color="outline"),
-                ], spacing=2, expand=True),
+                ], width=200),
                 
                 # Contact info
                 ft.Column([
-                    ft.Row([
-                        ft.Icon(ft.Icons.PHONE, size=14, color="secondary"),
-                        ft.Text(patient['phone'] or "No phone", size=12),
-                    ], spacing=5),
-                    ft.Row([
-                        ft.Icon(ft.Icons.EMAIL, size=14, color="secondary"),
-                        ft.Text(patient['email'] or "No email", size=12),
-                    ], spacing=5),
-                ], spacing=3, expand=True),
+                    ft.Text(patient['email'] or "-", size=12),
+                    ft.Text(patient['phone'] or "-", size=12, color="outline"),
+                ], expand=True),
                 
-                # Registration Date
-                ft.Column([
-                    ft.Text("Registered", size=10, color="outline"),
-                    ft.Text(
-                        patient['created_at'][:10] if patient['created_at'] else "N/A",
-                        size=12,
-                        weight="bold",
-                    ),
-                ], spacing=2),
-                
-                # Action Buttons
-                ft.Row([
-                    ft.IconButton(
-                        icon=ft.Icons.VISIBILITY,
-                        icon_color="primary",
-                        tooltip="View Details",
-                        on_click=lambda e, pid=patient['id']: e.page.go(f"/staff/patient/{pid}"),
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.SEARCH,
-                        icon_color="secondary",
-                        tooltip="Search This Patient",
-                        on_click=lambda e, name=patient['full_name']: search_specific(e, name),
-                    ),
-                ], spacing=5),
-            ], spacing=10, alignment=ft.MainAxisAlignment.START),
-            padding=15,
-            border=ft.border.all(1, "outlineVariant"),
-            border_radius=8,
+                # Eye Button to see details
+                ft.IconButton(
+                    icon=ft.Icons.VISIBILITY,
+                    tooltip="View Details",
+                    icon_color="primary",
+                    on_click=lambda e, pid=patient['id']: e.page.go(f"/staff/patient/{pid}")
+                )
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            
+            padding=ft.padding.symmetric(horizontal=15, vertical=10),
             bgcolor="surface",
+            border_radius=8,
+            border=ft.border.all(1, "outlineVariant"),
         )
     
-    # Helper to jump to search page with name pre-filled
-    def search_specific(e, patient_name):
-        e.page.go(f"/staff/search?q={patient_name}")
-    
-    # Function to get data from DB
+    # --- LOAD DATA ---
     def load_patients(e=None):
         patients_container.controls.clear()
         
-        filter_term = search_field.value.lower() if search_field.value else ""
-        sort_by = sort_dropdown.value
+        # Get values from inputs
+        txt = search_field.value.lower() if search_field.value else ""
+        sort = sort_dropdown.value
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Base query
-        query = "SELECT * FROM users WHERE role = 'Patient'"
+        sql = "SELECT * FROM users WHERE role = 'Patient'"
         
-        # Add filtering
-        if filter_term:
-            query += f" AND LOWER(full_name) LIKE '%{filter_term}%'"
+        # Filter if text exists
+        if txt:
+            sql += f" AND LOWER(full_name) LIKE '%{txt}%'"
+            
+        # Apply sorting
+        if sort == "name_asc": sql += " ORDER BY full_name ASC"
+        elif sort == "name_desc": sql += " ORDER BY full_name DESC"
+        elif sort == "newest": sql += " ORDER BY created_at DESC"
         
-        # Add sorting
-        if sort_by == "name_asc":
-            query += " ORDER BY full_name ASC"
-        elif sort_by == "name_desc":
-            query += " ORDER BY full_name DESC"
-        elif sort_by == "recent":
-            query += " ORDER BY created_at DESC"
-        elif sort_by == "oldest":
-            query += " ORDER BY created_at ASC"
-        
-        cursor.execute(query)
+        cursor.execute(sql)
         rows = cursor.fetchall()
         conn.close()
         
         if rows:
-            # Show count
-            patients_container.controls.append(
-                ft.Row([
-                    ft.Icon(ft.Icons.PEOPLE, color="primary", size=24),
-                    ft.Text(
-                        f"Showing {len(rows)} patient(s)",
-                        size=16,
-                        weight="bold",
-                    ),
-                ], spacing=10)
-            )
-            
-            patients_container.controls.append(ft.Divider(height=10))
-            
-            # Loop through rows and make UI
+            patients_container.controls.append(ft.Text(f"Total: {len(rows)} patients", color="outline"))
             for idx, row in enumerate(rows):
-                patient = {
-                    'id': row[0],
-                    'username': row[1],
-                    'full_name': row[4],
-                    'email': row[6],
-                    'phone': row[7],
-                    'created_at': row[10] if len(row) > 10 else None,
+                # Map tuple to dict
+                p = {
+                    'id': row[0], 'full_name': row[4],
+                    'email': row[6], 'phone': row[7]
                 }
-                patients_container.controls.append(create_patient_row(patient, idx))
+                patients_container.controls.append(create_patient_row(p, idx))
         else:
-            # Empty state
             patients_container.controls.append(
                 ft.Container(
-                    content=ft.Column([
-                        ft.Icon(ft.Icons.PERSON_OFF, size=80, color="outline"),
-                        ft.Text("No patients found", size=18, color="outline"),
-                        ft.Text("Try adjusting your filter", size=14, color="outline", italic=True),
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-                    padding=50,
+                    content=ft.Text("No patients found matching filter.", color="outline"),
+                    alignment=ft.alignment.center,
+                    padding=20
                 )
             )
         
-        if e and hasattr(e, 'page'):
-            e.page.update()
-    
-    # Fake page for initial load
-    class FakePage:
-        def update(self): pass
-        def go(self, route): pass
-    load_patients(type('Event', (), {'page': FakePage()})())
+        if e: e.page.update()
+        
+    # Hack to load data when page first opens
+    class Dummy: 
+        page = None
+    load_patients(None)
     
     # --- PAGE LAYOUT ---
     return ft.Column([
-        # Header - BACK BUTTON REMOVED
-        NavigationHeader(
-            "All Patients",
-            "View complete list of registered patients",
-            show_back=False, # Set to False as requested
-        ),
+        NavigationHeader("All Patients", "Full directory of registered patients", show_back=False),
         
         ft.Container(
+            padding=20,
             content=ft.Column([
-                # Toolbar
+                # Filter Bar Row
                 ft.Row([
                     search_field,
                     sort_dropdown,
-                    ft.ElevatedButton(
-                        "Apply",
-                        icon=ft.Icons.CHECK,
-                        bgcolor="primary",
-                        color="white",
-                        on_click=load_patients,
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.REFRESH,
-                        icon_color="primary",
-                        tooltip="Refresh List",
-                        on_click=load_patients,
-                    ),
-                ], spacing=10),
+                    ft.IconButton(ft.Icons.REFRESH, on_click=load_patients, tooltip="Refresh")
+                ]),
                 
-                ft.Container(height=10),
+                ft.ElevatedButton("Apply Filter", on_click=load_patients, width=150, bgcolor="primary", color="onPrimary"),
                 
-                # Info Box
-                ft.Container(
-                    content=ft.Row([
-                        ft.Icon(ft.Icons.INFO_OUTLINE, color="secondary", size=20),
-                        ft.Text(
-                            "Click on a patient to view their full details. You have read-only access.",
-                            size=12,
-                            color="outline",
-                        ),
-                    ], spacing=10),
-                    bgcolor=ft.Colors.with_opacity(0.05, "secondary"),
-                    padding=12,
-                    border_radius=8,
-                    border=ft.border.all(1, "secondary"),
-                ),
+                ft.Divider(),
                 
-                ft.Container(height=20),
-                
-                # The List
-                patients_container,
-            ], spacing=0),
-            padding=20,
-        ),
-    ], scroll=ft.ScrollMode.AUTO, spacing=0)
+                # The actual list
+                patients_container
+            ])
+        )
+    ], 
+    scroll=ft.ScrollMode.AUTO, 
+    spacing=0,
+    # IMPORTANT: Forces content to top
+    alignment=ft.MainAxisAlignment.START,
+    expand=True
+    )

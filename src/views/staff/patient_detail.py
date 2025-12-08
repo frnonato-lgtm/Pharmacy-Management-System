@@ -7,167 +7,101 @@ from components.navigation_header import NavigationHeader
 def StaffPatientDetail(patient_id):
     """Display detailed patient information (read-only)."""
     
-    # Get patient data
+    # 1. Fetch Patient Data from DB
     conn = get_db_connection()
     cursor = conn.cursor()
-    
     cursor.execute("SELECT * FROM users WHERE id = ? AND role = 'Patient'", (patient_id,))
-    patient_row = cursor.fetchone()
-    
-    if not patient_row:
-        conn.close()
-        return ft.Column([
-            NavigationHeader("Patient Not Found", show_back=True, back_route="/staff/search"),
-            ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=100, color="error"),
-                    ft.Text("Patient not found", size=24, weight="bold"),
-                    ft.Text(f"Patient ID: {patient_id}", color="outline"),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20),
-                padding=50,
-                expand=True,
-            ),
-        ])
-    
-    # Convert to dict - handle different row structures
-    try:
-        patient = dict(patient_row)
-    except:
-        patient = {
-            'id': patient_row[0],
-            'username': patient_row[1],
-            'full_name': patient_row[4] if len(patient_row) > 4 else 'Unknown',
-            'last_name': patient_row[5] if len(patient_row) > 5 else '',
-            'email': patient_row[6] if len(patient_row) > 6 else None,
-            'phone': patient_row[7] if len(patient_row) > 7 else None,
-            'dob': patient_row[8] if len(patient_row) > 8 else None,
-            'address': patient_row[9] if len(patient_row) > 9 else None,
-            'created_at': patient_row[10] if len(patient_row) > 10 else None,
-        }
-    
-    # Get prescription count - with error handling
-    prescription_count = 0
-    try:
-        cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE patient_id = ?", (patient_id,))
-        result = cursor.fetchone()
-        prescription_count = result[0] if result else 0
-    except Exception:
-        prescription_count = 0  # Table doesn't exist yet
-    
-    # Get order count - with error handling
-    order_count = 0
-    try:
-        cursor.execute("SELECT COUNT(*) FROM orders WHERE patient_id = ?", (patient_id,))
-        result = cursor.fetchone()
-        order_count = result[0] if result else 0
-    except Exception:
-        order_count = 0  # Table doesn't exist yet
-    
+    row = cursor.fetchone()
     conn.close()
     
-    # Helper: Info card
-    def info_card(title, value, icon):
+    # Handle error if patient not found
+    if not row:
+        return ft.Column([
+            NavigationHeader("Error", show_back=True, back_route="/staff/search"),
+            ft.Text("Patient not found", color="error")
+        ])
+    
+    # Convert tuple to dictionary
+    patient = {
+        'id': row[0], 'full_name': row[4], 'email': row[6],
+        'phone': row[7], 'dob': row[8], 'address': row[9],
+        'created_at': row[10]
+    }
+    
+    # Helper to create those little info squares
+    def info_tile(label, value, icon):
         return ft.Container(
-            content=ft.Column([
-                ft.Row([
-                    ft.Icon(icon, color="primary", size=24),
-                    ft.Text(title, size=12, color="outline", weight="bold"),
-                ], spacing=10),
-                ft.Container(height=5),
-                ft.Text(str(value or "Not provided"), size=15, weight="bold"),
-            ], spacing=5),
+            content=ft.Row([
+                ft.Icon(icon, color="secondary", size=20),
+                ft.Column([
+                    ft.Text(label, size=11, color="outline"),
+                    ft.Text(value or "N/A", size=14, weight="bold"),
+                ])
+            ]),
             padding=15,
-            border=ft.border.all(1, "outlineVariant"),
-            border_radius=8,
             bgcolor="surface",
-            expand=True,
+            border_radius=8,
+            border=ft.border.all(1, "outlineVariant"),
+            expand=True # Ensures they fill the width evenly
         )
     
+    # --- LAYOUT ---
     return ft.Column([
-        NavigationHeader(
-            f"Patient: {patient.get('full_name', 'Unknown')}",
-            "Read-only patient record view",
-            show_back=True,
-            back_route="/staff/search"
-        ),
+        # Keep back button here so they can return to search
+        NavigationHeader(f"Patient: {patient['full_name']}", "View Details (Read-Only)", show_back=True, back_route="/staff/search"),
         
         ft.Container(
+            padding=20,
             content=ft.Column([
-                # Patient header
+                # Profile Header Block
                 ft.Container(
                     content=ft.Row([
-                        ft.Container(
-                            width=80,
-                            height=80,
-                            bgcolor="primaryContainer",
-                            border_radius=40,
-                            content=ft.Icon(ft.Icons.PERSON, size=40, color="onPrimaryContainer"),
-                            alignment=ft.alignment.center,
-                        ),
+                        ft.Icon(ft.Icons.ACCOUNT_CIRCLE, size=80, color="primary"),
                         ft.Column([
-                            ft.Text(patient.get('full_name', 'Unknown'), size=24, weight="bold"),
-                            ft.Text(f"Patient ID: {patient.get('id', 'N/A')}", size=14, color="outline"),
-                            ft.Text(f"Username: {patient.get('username', 'N/A')}", size=13, color="outline"),
-                        ], spacing=3),
+                            ft.Text(patient['full_name'], size=24, weight="bold"),
+                            ft.Text(f"ID: {patient['id']}", size=14, color="outline"),
+                            ft.Container(
+                                content=ft.Text("Patient", color="white", size=10, weight="bold"),
+                                bgcolor="primary", padding=5, border_radius=5
+                            )
+                        ], spacing=2)
                     ], spacing=20),
                     padding=20,
                     bgcolor="surface",
-                    border_radius=10,
-                    border=ft.border.all(1, "outlineVariant"),
+                    border_radius=12,
+                    border=ft.border.all(1, "outlineVariant")
                 ),
                 
                 ft.Container(height=20),
                 
-                # Statistics
+                # Contact Info Row
+                ft.Text("Contact Info", size=18, weight="bold"),
                 ft.Row([
-                    info_card("Prescriptions", prescription_count, ft.Icons.MEDICATION),
-                    info_card("Orders", order_count, ft.Icons.SHOPPING_BAG),
-                    info_card(
-                        "Member Since",
-                        patient.get('created_at', 'N/A')[:10] if patient.get('created_at') else "N/A",
-                        ft.Icons.CALENDAR_TODAY
-                    ),
-                ], spacing=15),
+                    info_tile("Email Address", patient['email'], ft.Icons.EMAIL),
+                    info_tile("Phone Number", patient['phone'], ft.Icons.PHONE),
+                ]),
                 
-                ft.Container(height=20),
+                ft.Container(height=10),
                 
-                # Contact Information
-                ft.Text("Contact Information", size=20, weight="bold"),
+                # Personal Info Row
+                ft.Text("Personal Details", size=18, weight="bold"),
                 ft.Row([
-                    info_card("Email", patient.get('email'), ft.Icons.EMAIL),
-                    info_card("Phone", patient.get('phone'), ft.Icons.PHONE),
-                ], spacing=15),
+                    info_tile("Date of Birth", patient['dob'], ft.Icons.CAKE),
+                    info_tile("Home Address", patient['address'], ft.Icons.HOME),
+                ]),
                 
-                ft.Container(height=20),
+                ft.Container(height=30),
                 
-                # Personal Information
-                ft.Text("Personal Information", size=20, weight="bold"),
-                ft.Row([
-                    info_card("Date of Birth", patient.get('dob'), ft.Icons.CAKE),
-                    info_card("Address", patient.get('address'), ft.Icons.HOME),
-                ], spacing=15),
-                
-                ft.Container(height=20),
-                
-                # Read-only notice
+                # Read-only notice bar at bottom
                 ft.Container(
                     content=ft.Row([
-                        ft.Icon(ft.Icons.LOCK, color="tertiary", size=24),
-                        ft.Column([
-                            ft.Text("Read-Only Access", size=14, weight="bold", color="tertiary"),
-                            ft.Text(
-                                "You can view patient information but cannot make changes.",
-                                size=12,
-                                color="outline",
-                            ),
-                        ], spacing=3, expand=True),
-                    ], spacing=15),
-                    bgcolor=ft.Colors.with_opacity(0.05, "tertiary"),
-                    padding=15,
-                    border_radius=8,
-                    border=ft.border.all(1, "tertiary"),
-                ),
-            ], spacing=0),
-            padding=20,
-        ),
+                        ft.Icon(ft.Icons.LOCK, color="white"),
+                        ft.Text("You are viewing this record in Read-Only mode.", color="white")
+                    ], alignment=ft.MainAxisAlignment.CENTER),
+                    bgcolor="grey",
+                    padding=10,
+                    border_radius=8
+                )
+            ])
+        )
     ], scroll=ft.ScrollMode.AUTO, spacing=0)
