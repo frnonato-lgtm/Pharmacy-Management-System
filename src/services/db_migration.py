@@ -1,15 +1,29 @@
 """
-Complete Database Migration - All Features
-Run this ONCE to update your existing database with all missing tables.
-Includes: Pharmacist features + Staff/Patient features + Billing features
+Complete Database Migration & Seeding Script.
+Run this ONCE to update your existing database with all missing tables AND populate it with medicines.
+Includes: Pharmacist features + Staff/Patient features + Billing features + 54 Medicines + Sample Transactions.
 """
 
 import sqlite3
 import os
+import sys
 from datetime import datetime
 
-def run_migration():
-    """Add all necessary fields and tables to existing database."""
+# --- FIX: Add the parent directory to system path so we can import 'services' ---
+# This is needed because we are running this script directly from the services folder
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+# -------------------------------------------------------------------------------
+
+from services.database import init_db
+
+def run_migration_and_seed():
+    """Add all necessary fields, tables, AND seed data to existing database."""
+    
+    # 1. Ensure base tables exist first
+    print("🔄 Initializing base database structures...")
+    init_db()
     
     # Get the correct path to your database
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,7 +34,7 @@ def run_migration():
     cursor = conn.cursor()
     
     try:
-        print("🔄 Starting complete database migration...\n")
+        print("🔄 Starting complete database migration & seeding...\n")
         
         # ============================================
         # PART 1: PHARMACIST FEATURES
@@ -45,6 +59,7 @@ def run_migration():
         cursor.execute("PRAGMA table_info(prescriptions)")
         existing_columns = [col[1] for col in cursor.fetchall()]
         
+        # Add new columns if they are missing
         if 'medicine_id' not in existing_columns:
             cursor.execute("ALTER TABLE prescriptions ADD COLUMN medicine_id INTEGER")
             print("✅ Added medicine_id column to prescriptions")
@@ -212,9 +227,101 @@ def run_migration():
             print("✅ Payments table already exists")
         
         # ============================================
-        # PART 4: DATABASE INDEXES (Performance)
+        # PART 4: SEEDING MEDICINES (54 Items)
         # ============================================
-        print("\n📋 Part 4: Database Indexes")
+        print("\n📋 Part 4: Seeding Medicines (54 Items)")
+        print("-" * 50)
+
+        # Check if medicines already exist to avoid duplicates
+        cursor.execute("SELECT COUNT(*) FROM medicines")
+        med_count = cursor.fetchone()[0]
+
+        if med_count > 0:
+            print(f"⚠️ Database already contains {med_count} medicines. Skipping seed.")
+        else:
+            print("💊 Adding 54 medicines with varied stock levels...")
+            
+            # Format: Name, Category, Price (PHP), Stock, Expiry, Supplier
+            meds = [
+                # --- PAIN RELIEF (Varied Stock) ---
+                ('Biogesic 500mg', 'Pain Relief', 5.00, 500, '2027-12-31', 'Unilab'), # Good
+                ('Alaxan FR', 'Pain Relief', 11.00, 5, '2026-05-20', 'Unilab'),       # Low Stock
+                ('Advil 200mg', 'Pain Relief', 13.50, 0, '2025-11-15', 'Pfizer'),     # Out of Stock
+                ('RiteMED Paracetamol 500mg', 'Pain Relief', 3.50, 1000, '2027-01-01', 'RiteMED'),
+                ('Medicol Advance 400mg', 'Pain Relief', 8.50, 8, '2026-08-10', 'Unilab'), # Low Stock
+                ('Dolfenal 500mg', 'Pain Relief', 16.00, 150, '2025-12-05', 'Unilab'),
+                ('Ponstan 500mg', 'Pain Relief', 29.00, 100, '2026-03-30', 'Pfizer'),
+                ('Flanax 275mg', 'Pain Relief', 19.00, 0, '2026-07-22', 'Bayer'),     # Out of Stock
+                ('Tempra Forte Tablet', 'Pain Relief', 6.50, 400, '2026-09-15', 'Taisho'),
+                ('Calpol 500mg Tablet', 'Pain Relief', 7.00, 3, '2026-10-01', 'GSK'), # Low Stock
+                ('Rexidol 500mg', 'Pain Relief', 5.00, 200, '2026-02-14', 'Unilab'),
+                ('Saridon', 'Pain Relief', 6.00, 150, '2026-06-20', 'Bayer'),
+
+                # --- COUGH & COLD (Varied Stock) ---
+                ('Neozep Forte', 'Cough & Cold', 6.00, 600, '2026-02-28', 'Unilab'),
+                ('Bioflu', 'Cough & Cold', 8.00, 500, '2026-04-15', 'Unilab'),
+                ('Solmux 500mg', 'Cough & Cold', 13.00, 9, '2025-12-12', 'Unilab'),   # Low Stock
+                ('Decolgen Forte', 'Cough & Cold', 7.50, 400, '2026-01-20', 'Unilab'),
+                ('Tuseran Forte', 'Cough & Cold', 10.00, 0, '2026-06-30', 'Unilab'),  # Out of Stock
+                ('Robitussin Capsule', 'Cough & Cold', 18.00, 150, '2025-10-10', 'Pfizer'),
+                ('Ascof Lagundi 600mg', 'Cough & Cold', 12.00, 200, '2026-03-15', 'Pascual Lab'),
+                ('Symdex-D', 'Cough & Cold', 6.00, 500, '2026-11-20', 'Unilab'),
+                ('Sinutab High Potency', 'Cough & Cold', 11.50, 150, '2025-09-05', 'J&J'),
+                ('RiteMED Ambroxol', 'Cough & Cold', 4.50, 4, '2027-02-14', 'RiteMED'), # Low Stock
+                ('Allerkapt (Cetirizine)', 'Cough & Cold', 15.00, 200, '2026-08-20', 'Unilab'),
+                ('Virlix 10mg', 'Cough & Cold', 35.00, 100, '2026-09-30', 'GSK'),
+
+                # --- ANTIBIOTICS (Mostly Good Stock) ---
+                ('Amoxil 500mg', 'Antibiotics', 28.00, 100, '2025-08-30', 'GSK'),
+                ('Augmentin 625mg', 'Antibiotics', 85.00, 50, '2025-07-15', 'GSK'),
+                ('RiteMED Amoxicillin', 'Antibiotics', 9.00, 500, '2026-05-01', 'RiteMED'),
+                ('Zithromax (Azithromycin)', 'Antibiotics', 120.00, 2, '2025-12-31', 'Pfizer'), # Low Stock
+                ('RiteMED Cephalexin', 'Antibiotics', 18.00, 200, '2026-01-10', 'RiteMED'),
+                ('Ciprobay 500mg', 'Antibiotics', 65.00, 150, '2026-04-20', 'Bayer'),
+                
+                # --- MAINTENANCE (Varied) ---
+                ('Norvasc 5mg', 'Maintenance', 33.00, 200, '2026-11-11', 'Pfizer'),
+                ('Lipitor 10mg', 'Maintenance', 45.00, 0, '2026-10-25', 'Pfizer'),    # Out of Stock
+                ('RiteMED Losartan 50mg', 'Maintenance', 12.00, 500, '2027-01-05', 'RiteMED'),
+                ('RiteMED Amlodipine 10mg', 'Maintenance', 9.00, 600, '2027-03-15', 'RiteMED'),
+                ('Glucophage 500mg', 'Diabetes', 19.50, 300, '2026-02-20', 'Merck'),
+                ('RiteMED Metformin 500mg', 'Diabetes', 6.00, 7, '2027-05-10', 'RiteMED'), # Low Stock
+                ('Euglucon 5mg', 'Diabetes', 18.00, 400, '2026-09-09', 'Pfizer'),
+                ('Plavix 75mg', 'Heart Health', 90.00, 50, '2025-12-01', 'Sanofi'),
+
+                # --- VITAMINS (Varied) ---
+                ('Enervon C', 'Vitamins', 8.00, 500, '2027-01-01', 'Unilab'),
+                ('Centrum Advance', 'Vitamins', 14.00, 200, '2026-08-15', 'Pfizer'),
+                ('Poten-Cee 500mg', 'Vitamins', 7.50, 0, '2026-12-10', 'Pascual Lab'), # Out of Stock
+                ('Stresstabs', 'Vitamins', 12.00, 150, '2026-05-30', 'Pfizer'),
+                ('Myra E 400IU', 'Vitamins', 15.00, 200, '2026-02-14', 'Unilab'),
+                ('Fern-C', 'Vitamins', 9.00, 5, '2026-07-20', 'Fern'), # Low Stock
+                ('Immunpro', 'Vitamins', 17.00, 100, '2026-04-05', 'Unilab'),
+                ('Neurogen-E', 'Vitamins', 24.00, 150, '2026-06-15', 'Unilab'),
+
+                # --- GASTRO (Varied) ---
+                ('Kremil-S', 'Antacid', 6.00, 500, '2027-02-28', 'Unilab'),
+                ('Gaviscon Double Action', 'Antacid', 32.00, 6, '2026-01-20', 'Reckitt'), # Low Stock
+                ('Imodium 2mg', 'Antidiarrheal', 22.00, 200, '2026-11-30', 'J&J'),
+                ('Diatabs', 'Antidiarrheal', 9.00, 300, '2027-03-10', 'Unilab'),
+                ('Buscopan 10mg', 'Antispasmodic', 25.00, 150, '2026-08-05', 'Sanofi'),
+                ('Erceflora 2B', 'Probiotics', 55.00, 0, '2025-10-15', 'Sanofi'),      # Out of Stock
+                ('RiteMED Omeprazole 20mg', 'Antacid', 15.00, 400, '2026-12-05', 'RiteMED'),
+                ('Motilium 10mg', 'Antinausea', 35.00, 50, '2025-09-20', 'J&J'),
+            ]
+            
+            # Insert into database
+            cursor.executemany("""
+                INSERT INTO medicines (name, category, price, stock, expiry_date, supplier) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, meds)
+            
+            print("✅ Success! 54 Medicines added.")
+
+        # ============================================
+        # PART 5: DATABASE INDEXES (Performance)
+        # ============================================
+        print("\n📋 Part 5: Database Indexes")
         print("-" * 50)
         
         # Activity log indexes
@@ -237,27 +344,30 @@ def run_migration():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id)")
         
         print("✅ All database indexes created")
-        
+
         # ============================================
-        # PART 5: SAMPLE DATA (Optional)
+        # PART 6: SAMPLE TRANSACTIONS (Prescriptions/Orders)
         # ============================================
-        print("\n📋 Part 5: Sample Data")
+        print("\n📋 Part 6: Sample Transactions")
         print("-" * 50)
         
-        # Add sample prescriptions if needed
+        # Add sample prescriptions if they don't exist
         cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE medicine_id IS NOT NULL")
         if cursor.fetchone()[0] == 0:
             print("📝 Adding sample prescriptions...")
             
+            # Get patient ID
             cursor.execute("SELECT id FROM users WHERE username = 'pat'")
             patient = cursor.fetchone()
             patient_id = patient[0] if patient else 1
             
+            # Get some medicine IDs
             cursor.execute("SELECT id FROM medicines LIMIT 4")
             medicine_ids = [row[0] for row in cursor.fetchall()]
             
             if medicine_ids:
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # Format: patient_id, medicine_id, status, dosage, frequency, duration, doctor_name, notes, created_at
                 sample_prescriptions = [
                     (patient_id, medicine_ids[0], 'Pending', '500mg', '3 times daily', 7, 'Dr. Smith', 'Patient has penicillin allergy', now),
                     (patient_id, medicine_ids[1] if len(medicine_ids) > 1 else medicine_ids[0], 'Pending', '250mg', '2 times daily', 5, 'Dr. Johnson', 'Take with food', now),
@@ -272,9 +382,9 @@ def run_migration():
                 """, sample_prescriptions)
                 print(f"✅ Added {len(sample_prescriptions)} sample prescriptions")
         else:
-            print("✅ Prescriptions table has data")
+            print("✅ Prescriptions table already has data")
         
-        # Add sample orders if needed
+        # Add sample orders if they don't exist
         cursor.execute("SELECT COUNT(*) FROM orders")
         if cursor.fetchone()[0] == 0:
             print("📝 Adding sample orders...")
@@ -289,7 +399,7 @@ def run_migration():
             if medicines:
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
-                # Create sample order
+                # Create sample order header
                 cursor.execute("""
                     INSERT INTO orders (patient_id, order_date, status, total_amount, payment_method, payment_status, notes)
                     VALUES (?, ?, 'Completed', 150.00, 'Cash', 'Paid', 'Sample order')
@@ -297,8 +407,8 @@ def run_migration():
                 
                 order_id = cursor.lastrowid
                 
-                # Add order items
-                for med in medicines[:2]:  # Use first 2 medicines
+                # Add order items (2 items from the first 2 medicines found)
+                for med in medicines[:2]:
                     cursor.execute("""
                         INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
                         VALUES (?, ?, 2, ?, ?)
@@ -306,7 +416,7 @@ def run_migration():
                 
                 print("✅ Added 1 sample order with 2 items")
         else:
-            print("✅ Orders table has data")
+            print("✅ Orders table already has data")
         
         # ============================================
         # COMMIT CHANGES
@@ -314,17 +424,15 @@ def run_migration():
         conn.commit()
         
         print("\n" + "=" * 50)
-        print("🎉 MIGRATION COMPLETED SUCCESSFULLY!")
+        print("🎉 MIGRATION & SEEDING COMPLETED SUCCESSFULLY!")
         print("=" * 50)
         print("\n📋 Summary:")
-        print("   ✅ Activity log table (Pharmacist)")
-        print("   ✅ Prescription fields updated (Pharmacist)")
-        print("   ✅ Orders table (Staff/Patient)")
-        print("   ✅ Order_items table (Staff/Patient)")
-        print("   ✅ Invoices table verified (Billing)")
-        print("   ✅ Database indexes created (Performance)")
-        print("   ✅ Sample data added (Testing)")
-        print("\n✨ All features are now ready to use!")
+        print("   ✅ Activity log table created")
+        print("   ✅ All tables (Orders, Invoices, Prescriptions) verified")
+        print("   ✅ 54 Medicines seeded (with varied stock levels)")
+        print("   ✅ Performance indexes added")
+        print("   ✅ Sample Transactions (Rx/Orders) added")
+        print("\n✨ You can now run 'python main.py'!")
         print("=" * 50 + "\n")
         
     except Exception as e:
@@ -338,4 +446,4 @@ def run_migration():
         conn.close()
 
 if __name__ == "__main__":
-    run_migration()
+    run_migration_and_seed()
