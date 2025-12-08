@@ -9,11 +9,11 @@ from components.navigation_header import NavigationHeader
 def PrescriptionsView():
     """List all prescriptions with filters."""
     
-    # Place to hold the list of cards
+    # This holds the list of prescription cards
     prescriptions_container = ft.Column(spacing=10)
     
-    # --- FILTER BUTTONS ---
-    # Dropdown to filter by status (Pending, Approved, etc.)
+    # --- FILTERS ---
+    # Dropdown to pick status
     status_filter = ft.Dropdown(
         label="Status",
         options=[
@@ -25,23 +25,25 @@ def PrescriptionsView():
         ],
         value="All",
         width=150,
+        # Making sure the border shows up in dark mode
+        border_color="primary",
     )
     
-    # Search box for names
+    # Search box
     search_field = ft.TextField(
         hint_text="Search by patient name or prescription ID...",
         prefix_icon=ft.Icons.SEARCH,
-        border_color="outline",
+        # Visible border for dark mode
+        border_color="primary",
         expand=True,
     )
     
-    # --- DATABASE STUFF ---
+    # --- DB FUNCTION ---
     def get_prescriptions_from_db(status_val="All", search_query=""):
-        # Connect to the DB
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Basic query to get everything
+        # Base query to grab everything
         query = """
             SELECT p.id, p.status, p.created_at, p.dosage, p.frequency, p.duration,
                    p.notes, p.pharmacist_notes, p.reviewed_date,
@@ -55,25 +57,25 @@ def PrescriptionsView():
         
         params = []
         
-        # Add filter for status if needed
+        # Filter by status if selected
         if status_val != "All":
             query += " AND p.status = ?"
             params.append(status_val)
         
-        # Add filter for search text
+        # Filter by text search
         if search_query:
             query += " AND (u.full_name LIKE ? OR p.id LIKE ?)"
             params.append(f"%{search_query}%")
             params.append(f"%{search_query}%")
         
-        # Sort so newest is first
+        # Sort newest first
         query += " ORDER BY p.created_at DESC"
         
         cursor.execute(query, params)
         results = cursor.fetchall()
         conn.close()
         
-        # Turn the ugly database rows into a nice list of dictionaries
+        # Convert DB rows to a nice list of dictionaries
         prescriptions = []
         for row in results:
             prescriptions.append({
@@ -93,11 +95,9 @@ def PrescriptionsView():
         
         return prescriptions
     
-    # --- UI COMPONENTS ---
-    
-    # Function to make a single card for a prescription
+    # --- UI CARD CREATOR ---
     def create_prescription_card(rx):
-        # Pick a color based on status
+        # Assign colors for badges
         status_colors = {
             "Pending": "tertiary",
             "Approved": "primary",
@@ -109,7 +109,7 @@ def PrescriptionsView():
         
         return ft.Container(
             content=ft.Column([
-                # Top row: ID, Name and Status Badge
+                # Top part: Header and Status
                 ft.Row([
                     ft.Column([
                         ft.Text(f"Prescription #{rx['id']}", size=16, weight="bold"),
@@ -131,7 +131,7 @@ def PrescriptionsView():
                 
                 ft.Divider(height=10),
                 
-                # Middle row: Medicine details
+                # Medicine Details Row
                 ft.Row([
                     ft.Column([
                         ft.Text("Medicine:", size=11, color="outline"),
@@ -151,13 +151,13 @@ def PrescriptionsView():
                 
                 ft.Container(height=5),
                 
-                # Time submitted
+                # Timestamp
                 ft.Row([
                     ft.Icon(ft.Icons.ACCESS_TIME, size=14, color="outline"),
                     ft.Text(f"Submitted: {rx['created_at']}", size=12, color="outline"),
                 ], spacing=5),
                 
-                # Show notes box only if there are notes
+                # Notes Box (Only if notes exist)
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.NOTE, size=16, color="tertiary"),
@@ -169,14 +169,13 @@ def PrescriptionsView():
                     border_radius=5,
                 ),
                 
-                # Buttons at the bottom
+                # Action Buttons
                 ft.Row([
                     ft.ElevatedButton(
                         "Review Details",
                         icon=ft.Icons.VISIBILITY,
                         bgcolor="primary",
                         color="onPrimary",
-                        # Go to the details page when clicked
                         on_click=lambda e, rx_id=rx['id']: e.page.go(f"/pharmacist/prescription/{rx_id}"),
                     ),
                     ft.OutlinedButton(
@@ -196,19 +195,16 @@ def PrescriptionsView():
             padding=20,
             border=ft.border.all(1, "outlineVariant"),
             border_radius=10,
-            bgcolor="surface",
+            bgcolor="surface", # Dark mode friendly
         )
     
     # --- ACTIONS ---
-    
     def quick_approve(e, rx_id):
-        """Approve instantly without going to details page."""
         user = AppState.get_user()
         conn = get_db_connection()
         cursor = conn.cursor()
         
         try:
-            # Update the status in DB
             cursor.execute("""
                 UPDATE prescriptions 
                 SET status = 'Approved',
@@ -217,7 +213,6 @@ def PrescriptionsView():
                 WHERE id = ?
             """, (user['id'], datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rx_id))
             
-            # Add to the log
             cursor.execute("""
                 INSERT INTO activity_log (user_id, action, details, timestamp)
                 VALUES (?, ?, ?, ?)
@@ -229,12 +224,7 @@ def PrescriptionsView():
             ))
             
             conn.commit()
-            
-            # Show popup message
-            e.page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Prescription #{rx_id} approved!"),
-                bgcolor="primary",
-            )
+            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Prescription #{rx_id} approved!"), bgcolor="primary")
             e.page.snack_bar.open = True
             
         except Exception as ex:
@@ -244,14 +234,13 @@ def PrescriptionsView():
         
         finally:
             conn.close()
-            load_prescriptions(e) # Refresh the list
+            load_prescriptions(e)
     
     def quick_reject(e, rx_id):
-        # For rejection, we force them to go to details page to give a reason
         e.page.go(f"/pharmacist/prescription/{rx_id}")
     
+    # --- LOADING LOGIC ---
     def load_prescriptions(e=None):
-        """Reload the list of prescriptions."""
         prescriptions_container.controls.clear()
         
         status = status_filter.value
@@ -260,16 +249,14 @@ def PrescriptionsView():
         all_prescriptions = get_prescriptions_from_db(status, query)
         
         if all_prescriptions:
-            # Show the count
             prescriptions_container.controls.append(
                 ft.Text(f"Showing {len(all_prescriptions)} prescription(s)", 
                        size=14, color="outline", weight="bold")
             )
-            # Add cards for each one
             for rx in all_prescriptions:
                 prescriptions_container.controls.append(create_prescription_card(rx))
         else:
-            # Show empty state if nothing found
+            # Empty State - CENTERED FIXED HERE
             prescriptions_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -278,33 +265,32 @@ def PrescriptionsView():
                         ft.Text("Try adjusting your filters", size=14, color="outline"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                     padding=50,
+                    alignment=ft.alignment.center, # Forces alignment to center of screen area
                 )
             )
         
         if e and hasattr(e, 'page'):
             e.page.update()
     
-    # Fake page object for initial load
+    # Initial load
     class FakePage:
         snack_bar = None
         def update(self): pass
         def go(self, route): pass
     
-    # Load data when page starts
     load_prescriptions(type('Event', (), {'page': FakePage()})())
     
     # --- PAGE LAYOUT ---
     return ft.Column([
-        # Header - BACK BUTTON REMOVED
         NavigationHeader(
             "Prescription Management",
             "Review, approve, or reject patient prescriptions",
-            show_back=False, # Set to False as requested
+            show_back=False,
         ),
         
         ft.Container(
             content=ft.Column([
-                # Filters row
+                # Filters
                 ft.Row([
                     search_field,
                     status_filter,
@@ -315,17 +301,12 @@ def PrescriptionsView():
                         color="onPrimary",
                         on_click=load_prescriptions,
                     ),
-                    ft.IconButton(
-                        icon=ft.Icons.REFRESH,
-                        icon_color="primary",
-                        tooltip="Refresh",
-                        on_click=load_prescriptions,
-                    ),
+                    # REFRESH BUTTON REMOVED FROM HERE
                 ], spacing=10),
                 
                 ft.Container(height=20),
                 
-                # The actual list
+                # List
                 prescriptions_container,
             ], spacing=0),
             padding=20,

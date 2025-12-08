@@ -90,7 +90,7 @@ def PharmacistDashboard():
                             weight="bold",
                             color=color,
                         ),
-                        ft.Text(subtitle, size=11, color="outline") if subtitle else ft.Container(),
+                        ft.Text(subtitle, size=11, color="outline") if subtitle else ft.Container(height=16),
                     ], spacing=2, expand=True),
                 ], spacing=15),
             ]),
@@ -99,6 +99,7 @@ def PharmacistDashboard():
             border_radius=10,
             border=ft.border.all(1, "outlineVariant"),
             expand=True,
+            height=140,
         )
     
     # Helper: Create quick action button
