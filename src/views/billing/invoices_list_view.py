@@ -9,10 +9,14 @@ from components.navigation_header import NavigationHeader
 def InvoicesListView():
     """Complete invoice management with filters and actions."""
     
+    # Get the current user so we know who is logged in
     user = AppState.get_user()
+    
+    # This column holds the list of invoice cards
     invoices_container = ft.Column(spacing=10)
     
     # --- FILTERS ---
+    # Dropdown to filter by Paid, Unpaid, etc.
     status_filter = ft.Dropdown(
         label="Status",
         options=[
@@ -26,6 +30,7 @@ def InvoicesListView():
         width=150,
     )
     
+    # Dropdown for Cash, Card, etc.
     payment_method_filter = ft.Dropdown(
         label="Payment Method",
         options=[
@@ -41,6 +46,7 @@ def InvoicesListView():
         width=180,
     )
     
+    # Date range inputs
     date_from = ft.TextField(
         label="From Date",
         value="",
@@ -57,6 +63,7 @@ def InvoicesListView():
         hint_text="YYYY-MM-DD",
     )
     
+    # Search bar
     search_field = ft.TextField(
         hint_text="Search by invoice #, patient name...",
         prefix_icon=ft.Icons.SEARCH,
@@ -66,10 +73,11 @@ def InvoicesListView():
     
     # --- DB FUNCTION ---
     def get_invoices_from_db(status="All", payment_method="All", date_start="", date_end="", search=""):
+        # Connect to the database
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Start with base query
+        # Start with a basic query to grab everything
         query = """
             SELECT i.id, i.invoice_number, i.total_amount, i.status, i.created_at,
                    i.payment_method, i.payment_date, i.subtotal, i.tax, i.discount,
@@ -81,7 +89,7 @@ def InvoicesListView():
         
         params = []
         
-        # Append filters to query if needed
+        # Add conditions based on what the user selected
         if status != "All":
             query += " AND i.status = ?"
             params.append(status)
@@ -103,6 +111,7 @@ def InvoicesListView():
             params.append(f"%{search}%")
             params.append(f"%{search}%")
         
+        # Sort so the newest ones show up first
         query += " ORDER BY i.created_at DESC"
         
         cursor.execute(query, params)
@@ -113,6 +122,7 @@ def InvoicesListView():
     
     # --- CARD CREATOR ---
     def create_invoice_card(inv):
+        # Unpack the database row
         inv_id, inv_number, total, status, created_at, payment_method, payment_date, subtotal, tax, discount, patient_name, patient_id = inv
         
         # Color coding for status
@@ -124,7 +134,7 @@ def InvoicesListView():
         }
         status_color = status_colors.get(status, "outline")
         
-        # Nice date format
+        # Make the date look nice
         try:
             date_obj = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
             formatted_date = date_obj.strftime("%b %d, %Y")
@@ -350,7 +360,7 @@ def InvoicesListView():
             for inv in invoices:
                 invoices_container.controls.append(create_invoice_card(inv))
         else:
-            # Empty state
+            # Empty state - FIXED ALIGNMENT HERE
             invoices_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -359,6 +369,7 @@ def InvoicesListView():
                         ft.Text("Try adjusting your filters or create a new invoice", size=14, color="outline"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                     padding=50,
+                    alignment=ft.alignment.center, # <--- This makes sure it centers on the screen
                 )
             )
         
@@ -379,7 +390,7 @@ def InvoicesListView():
         NavigationHeader(
             "All Invoices",
             "View and manage all billing invoices",
-            show_back=False, # Set to False as requested
+            show_back=False,
         ),
         
         ft.Container(
