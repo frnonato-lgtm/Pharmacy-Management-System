@@ -111,9 +111,6 @@ def OrdersView():
         # Parse items into list
         items_list = items.split(', ') if items != "No items" else []
         
-        def view_details_click(e):
-            view_order_details(e, order_id)
-        
         return ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -147,19 +144,6 @@ def OrdersView():
                     ft.Text("Total:", size=14, weight="bold"),
                     ft.Text(f"₱ {total:.2f}", size=16, weight="bold", color="primary"),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                
-                ft.Row([
-                    ft.TextButton(
-                        "View Details", 
-                        icon=ft.Icons.VISIBILITY,
-                        on_click=view_details_click
-                    ),
-                    ft.OutlinedButton(
-                        "Track Order", 
-                        icon=ft.Icons.LOCAL_SHIPPING,
-                        disabled=status == "Completed"
-                    ),
-                ], alignment=ft.MainAxisAlignment.END, spacing=5),
             ], spacing=10),
             padding=20,
             border=ft.border.all(1, "outlineVariant"),
