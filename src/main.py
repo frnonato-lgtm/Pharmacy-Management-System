@@ -15,12 +15,13 @@ from views.patient.orders_view import OrdersView
 from views.patient.profile_view import ProfileView
 from views.patient.prescription_view import PatientPrescriptionsView
 from views.patient.invoices_view import PatientInvoicesView
+#from views.patient.order_detail_view import OrderDetailView
 
 from views.admin.admin_dashboard import AdminDashboard
 from views.admin.user_management import UserManagement
 from views.admin.reports_view import ReportsView as AdminReportsView
 from views.admin.logs_view import SystemLogs
-#from views.audit_log_viewer import AuditLogViewer
+##from views.audit_log_viewer import AuditLogViewer
 
 from views.inventory.inventory_dashboard import InventoryDashboard
 from views.inventory.manage_stock import ManageStock
