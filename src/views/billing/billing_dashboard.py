@@ -64,7 +64,7 @@ def BillingDashboard():
                         ft.Text(title, size=14, color="outline"),
                         ft.Text(
                             display_value,
-                            size=28 if is_currency else 32,
+                            size=28 if is_currency else 28,
                             weight="bold",
                             color=color,
                         ),
@@ -78,7 +78,7 @@ def BillingDashboard():
             border_radius=10,
             border=ft.border.all(1, "outlineVariant"),
             expand=True,
-            height=140, # FIXED HEIGHT
+            height= 140,
         )
     
     def create_action_button(text, icon, route, color):

@@ -36,6 +36,7 @@ from views.billing.create_invoices_view import CreateInvoicesView
 from views.billing.billing_reports_view import BillingReportsView
 from views.billing.invoices_list_view import InvoicesListView
 from views.billing.payment_history_view import PaymentHistoryView
+from views.billing.invoice_detail_view import InvoiceDetailView
 
 from views.staff.staff_dashboard import StaffDashboard
 from views.staff.patient_search import StaffPatientSearch
@@ -130,6 +131,15 @@ def main(page: ft.Page):
             elif troute == "/billing/invoices": content = InvoicesListView()
             elif troute == "/billing/payments": content = PaymentHistoryView()
             elif troute == "/billing/reports" : content = BillingReportsView()
+            elif troute.startswith("/billing/invoice/"):
+                inv_id = troute.split("/")[-1]
+                try:
+                    inv_id = int(inv_id)
+                    content = InvoiceDetailView(inv_id)
+                except (ValueError, IndexError):
+                    e.page.go("/billing/invoices")
+                    return
+                    
             # 6. Admin Views
             elif troute == "/admin/users": content = UserManagement()
             elif troute == "/admin/reports": content = AdminReportsView()
