@@ -138,7 +138,7 @@ def main(page: ft.Page):
                     inv_id = int(inv_id)
                     content = InvoiceDetailView(inv_id)
                 except (ValueError, IndexError):
-                    page.go("/billing/invoices")
+                    e.page.go("/billing/invoices")
                     return
                     
             # 6. Admin Views
