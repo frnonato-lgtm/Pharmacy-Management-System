@@ -9,7 +9,7 @@ def AllPatientsView():
     
     patients_container = ft.Column(spacing=10)
     
-    # Dropdown to pick sorting
+    # Filter controls
     # Added border_color="primary" so it's visible in Dark Mode
     sort_dropdown = ft.Dropdown(
         label="Sort By",
@@ -23,8 +23,8 @@ def AllPatientsView():
         border_color="primary", 
     )
     
-    # Quick filter box
-    # Added border_color="primary" here too
+    # Quick filter
+    # Added border_color="primary" for visibility
     search_field = ft.TextField(
         hint_text="Quick filter by name...",
         prefix_icon=ft.Icons.FILTER_LIST,
@@ -33,7 +33,6 @@ def AllPatientsView():
     )
     
     # --- ROW CREATOR ---
-    # Makes the horizontal strip for each patient
     def create_patient_row(patient, index):
         return ft.Container(
             content=ft.Row([
@@ -53,13 +52,13 @@ def AllPatientsView():
                     ft.Text(f"ID: {patient['id']}", size=11, color="outline"),
                 ], width=200),
                 
-                # Contact info
+                # Contact
                 ft.Column([
                     ft.Text(patient['email'] or "-", size=12),
                     ft.Text(patient['phone'] or "-", size=12, color="outline"),
                 ], expand=True),
                 
-                # Eye Button to see details
+                # View Details Button
                 ft.IconButton(
                     icon=ft.Icons.VISIBILITY,
                     tooltip="View Details",
@@ -78,21 +77,19 @@ def AllPatientsView():
     def load_patients(e=None):
         patients_container.controls.clear()
         
-        # Get values from inputs
+        # Get inputs
         txt = search_field.value.lower() if search_field.value else ""
         sort = sort_dropdown.value
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Base query
+        # Build query
         sql = "SELECT * FROM users WHERE role = 'Patient'"
         
-        # Filter if text exists
         if txt:
             sql += f" AND LOWER(full_name) LIKE '%{txt}%'"
             
-        # Apply sorting
         if sort == "name_asc": sql += " ORDER BY full_name ASC"
         elif sort == "name_desc": sql += " ORDER BY full_name DESC"
         elif sort == "newest": sql += " ORDER BY created_at DESC"
@@ -104,7 +101,6 @@ def AllPatientsView():
         if rows:
             patients_container.controls.append(ft.Text(f"Total: {len(rows)} patients", color="outline"))
             for idx, row in enumerate(rows):
-                # Map tuple to dict
                 p = {
                     'id': row[0], 'full_name': row[4],
                     'email': row[6], 'phone': row[7]
@@ -121,7 +117,7 @@ def AllPatientsView():
         
         if e: e.page.update()
         
-    # Hack to load data when page first opens
+    # Initial load hack
     class Dummy: 
         page = None
     load_patients(None)
@@ -137,21 +133,26 @@ def AllPatientsView():
                 ft.Row([
                     search_field,
                     sort_dropdown,
-                    ft.IconButton(ft.Icons.REFRESH, on_click=load_patients, tooltip="Refresh")
+                    # Swapped refresh button for the Apply Filter button
+                    ft.ElevatedButton(
+                        "Apply Filter", 
+                        on_click=load_patients, 
+                        height=50, # Matches height of text fields
+                        bgcolor="primary", 
+                        color="onPrimary"
+                    ),
                 ]),
-                
-                ft.ElevatedButton("Apply Filter", on_click=load_patients, width=150, bgcolor="primary", color="onPrimary"),
                 
                 ft.Divider(),
                 
-                # The actual list
+                # List
                 patients_container
             ])
         )
     ], 
     scroll=ft.ScrollMode.AUTO, 
     spacing=0,
-    # IMPORTANT: Forces content to top
+    # Forces content to stick to the TOP
     alignment=ft.MainAxisAlignment.START,
     expand=True
     )
