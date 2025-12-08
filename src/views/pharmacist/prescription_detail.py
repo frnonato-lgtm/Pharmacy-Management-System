@@ -1,4 +1,4 @@
-"""Detailed prescription review view."""
+"""Detailed prescription review view - FIXED VERSION."""
 
 import flet as ft
 from datetime import datetime
@@ -38,7 +38,7 @@ def PrescriptionDetailView(prescription_id):
         if not row:
             return None
         
-        # Convert to dictionary
+        # Convert to dictionary with safe defaults
         return {
             'id': row[0],
             'patient_id': row[1],
@@ -47,19 +47,19 @@ def PrescriptionDetailView(prescription_id):
             'notes': row[4],
             'created_at': row[5],
             'medicine_id': row[6] if len(row) > 6 else None,
-            'dosage': row[7] if len(row) > 7 else 'N/A',
-            'frequency': row[8] if len(row) > 8 else 'N/A',
-            'duration': row[9] if len(row) > 9 else 0,
-            'doctor_name': row[10] if len(row) > 10 else 'N/A',
+            'dosage': row[7] if len(row) > 7 and row[7] else 'N/A',
+            'frequency': row[8] if len(row) > 8 and row[8] else 'N/A',
+            'duration': row[9] if len(row) > 9 and row[9] else 0,
+            'doctor_name': row[10] if len(row) > 10 and row[10] else 'N/A',
             'pharmacist_id': row[11] if len(row) > 11 else None,
-            'pharmacist_notes': row[12] if len(row) > 12 else '',
+            'pharmacist_notes': row[12] if len(row) > 12 and row[12] else '',
             'reviewed_date': row[13] if len(row) > 13 else None,
-            'patient_name': row[14] if len(row) > 14 else 'Unknown',
-            'patient_email': row[15] if len(row) > 15 else 'N/A',
-            'patient_phone': row[16] if len(row) > 16 else 'N/A',
-            'medicine_name': row[17] if len(row) > 17 else 'N/A',
-            'medicine_stock': row[18] if len(row) > 18 else 0,
-            'medicine_price': row[19] if len(row) > 19 else 0.0,
+            'patient_name': row[14] if len(row) > 14 and row[14] else 'Unknown',
+            'patient_email': row[15] if len(row) > 15 and row[15] else 'N/A',
+            'patient_phone': row[16] if len(row) > 16 and row[16] else 'N/A',
+            'medicine_name': row[17] if len(row) > 17 and row[17] else 'Not specified',
+            'medicine_stock': row[18] if len(row) > 18 and row[18] is not None else 0,
+            'medicine_price': row[19] if len(row) > 19 and row[19] is not None else 0.0,
         }
     
     rx = get_prescription()
@@ -234,6 +234,10 @@ def PrescriptionDetailView(prescription_id):
             expand=True,
         )
     
+    # Safe stock check
+    medicine_stock = rx['medicine_stock'] or 0
+    stock_color = "error" if medicine_stock < 10 else "primary"
+    
     return ft.Column([
         # Navigation header
         NavigationHeader(
@@ -330,10 +334,10 @@ def PrescriptionDetailView(prescription_id):
                             ft.Column([
                                 ft.Text("Current Stock", size=12, color="outline"),
                                 ft.Text(
-                                    f"{rx['medicine_stock']} units",
+                                    f"{medicine_stock} units",
                                     size=16,
                                     weight="bold",
-                                    color="error" if rx['medicine_stock'] < 10 else "primary"
+                                    color=stock_color
                                 ),
                             ], spacing=2, expand=True),
                             
