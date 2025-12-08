@@ -12,23 +12,36 @@ def BillingDashboard():
     user = AppState.get_user()
     user_name = user['full_name'] if user else "Billing Clerk"
     
+    # Initialize defaults
+    pending_invoices = 0
+    paid_today = 0
+    revenue_today = 0.0
+    pending_amount = 0.0
+    recent_invoices = []
+    recent_activities = []
+
     # --- FETCH STATS ---
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # 1. Pending Invoices Count
         cursor.execute("SELECT COUNT(*) FROM invoices WHERE status = 'Unpaid'")
         pending_invoices = cursor.fetchone()[0] or 0
         
+        # 2. Paid Today Count
         cursor.execute("SELECT COUNT(*) FROM invoices WHERE status = 'Paid' AND DATE(payment_date) = DATE('now')")
         paid_today = cursor.fetchone()[0] or 0
         
+        # 3. Revenue Today
         cursor.execute("SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'Paid' AND DATE(payment_date) = DATE('now')")
         revenue_today = cursor.fetchone()[0] or 0.0
         
+        # 4. Total Pending Amount
         cursor.execute("SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'Unpaid'")
         pending_amount = cursor.fetchone()[0] or 0.0
         
+        # 5. Recent Invoices List
         cursor.execute("""
             SELECT i.id, i.invoice_number, i.total_amount, i.status, i.created_at, u.full_name as patient_name
             FROM invoices i
@@ -37,23 +50,23 @@ def BillingDashboard():
         """)
         recent_invoices = cursor.fetchall()
         
+        # 6. Recent Activity List
         try:
             cursor.execute("""
                 SELECT action, details, timestamp FROM activity_log
                 WHERE user_id = ? ORDER BY timestamp DESC LIMIT 5
             """, (user['id'],))
             recent_activities = cursor.fetchall()
-        except: recent_activities = []
+        except: 
+            recent_activities = []
         
         conn.close()
     except Exception as e:
-        print(e)
-        pending_invoices = paid_today = revenue_today = pending_amount = 0
-        recent_invoices = recent_activities = []
+        print(f"Dashboard Error: {e}")
     
     # --- UI HELPERS ---
     
-    # Fixed height stat card (FIX APPLIED)
+    # Fixed height stat card
     def create_stat_card(title, value, icon, color, subtitle="", is_currency=False):
         display_value = f"₱{value:,.2f}" if is_currency else str(value)
         return ft.Container(
@@ -64,7 +77,7 @@ def BillingDashboard():
                         ft.Text(title, size=14, color="outline"),
                         ft.Text(
                             display_value,
-                            size=28 if is_currency else 28,
+                            size=28 if is_currency else 32,
                             weight="bold",
                             color=color,
                         ),
@@ -78,7 +91,7 @@ def BillingDashboard():
             border_radius=10,
             border=ft.border.all(1, "outlineVariant"),
             expand=True,
-            height= 140,
+            height=140, # FIXED HEIGHT applied here
         )
     
     def create_action_button(text, icon, route, color):
@@ -131,6 +144,7 @@ def BillingDashboard():
         icon = action_icons.get(action, '•')
         return ft.Text(f"{icon} {details}", size=12, color="outline")
     
+    # Generate list widgets
     invoice_widgets = [create_invoice_item(inv) for inv in recent_invoices] if recent_invoices else [ft.Container(content=ft.Text("No recent invoices", color="outline"), padding=20)]
     activity_widgets = [create_activity_item(a[0], a[1], a[2]) for a in recent_activities] if recent_activities else [ft.Text("No recent activity", color="outline")]
     
@@ -145,7 +159,7 @@ def BillingDashboard():
                     create_stat_card("Paid Today", paid_today, ft.Icons.CHECK_CIRCLE, "primary", "Completed transactions"),
                     create_stat_card("Today's Revenue", revenue_today, ft.Icons.ATTACH_MONEY, "primary", is_currency=True),
                     create_stat_card("Pending Amount", pending_amount, ft.Icons.MONEY_OFF, "error", is_currency=True),
-                ], spacing=15), # Removed STRETCH since height is fixed
+                ], spacing=15), 
                 
                 ft.Container(height=20),
                 
@@ -167,6 +181,7 @@ def BillingDashboard():
                 
                 # Main Content Grid
                 ft.Row([
+                    # Recent Invoices Column
                     ft.Container(
                         content=ft.Column([
                             ft.Row([ft.Icon(ft.Icons.RECEIPT, color="primary"), ft.Text("Recent Invoices", size=20, weight="bold")], spacing=10),
@@ -177,6 +192,7 @@ def BillingDashboard():
                         padding=20, bgcolor="surface", border_radius=10, border=ft.border.all(1, "outlineVariant"), expand=2,
                     ),
                     
+                    # Recent Activity Column
                     ft.Container(
                         content=ft.Column([
                             ft.Row([ft.Icon(ft.Icons.HISTORY, color="primary"), ft.Text("Recent Activity", size=20, weight="bold")], spacing=10),

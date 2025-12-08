@@ -13,7 +13,6 @@ def InvoicesListView():
     invoices_container = ft.Column(spacing=10)
     
     # --- FILTERS ---
-    # Dropdown for status
     status_filter = ft.Dropdown(
         label="Status",
         options=[
@@ -25,11 +24,9 @@ def InvoicesListView():
         ],
         value="All",
         width=150,
-        # Adding this so it shows up in Dark Mode
         border_color="primary",
     )
     
-    # Dropdown for payment method
     payment_method_filter = ft.Dropdown(
         label="Payment Method",
         options=[
@@ -46,24 +43,20 @@ def InvoicesListView():
         border_color="primary",
     )
     
-    # Date pickers (text fields for now)
     date_from = ft.TextField(
         label="From Date",
-        value="",
-        width=150,
-        border_color="primary", # Fix for dark mode
-        hint_text="YYYY-MM-DD",
-    )
-    
-    date_to = ft.TextField(
-        label="To Date",
-        value="",
         width=150,
         border_color="primary",
         hint_text="YYYY-MM-DD",
     )
     
-    # Search bar
+    date_to = ft.TextField(
+        label="To Date",
+        width=150,
+        border_color="primary",
+        hint_text="YYYY-MM-DD",
+    )
+    
     search_field = ft.TextField(
         hint_text="Search by invoice #, patient name...",
         prefix_icon=ft.Icons.SEARCH,
@@ -71,12 +64,11 @@ def InvoicesListView():
         expand=True,
     )
     
-    # --- DATABASE STUFF ---
+    # --- DB FUNCTION ---
     def get_invoices_from_db(status="All", payment_method="All", date_start="", date_end="", search=""):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Base query
         query = """
             SELECT i.id, i.invoice_number, i.total_amount, i.status, i.created_at,
                    i.payment_method, i.payment_date, i.subtotal, i.tax, i.discount,
@@ -88,7 +80,6 @@ def InvoicesListView():
         
         params = []
         
-        # Add conditions dynamically
         if status != "All":
             query += " AND i.status = ?"
             params.append(status)
@@ -120,10 +111,8 @@ def InvoicesListView():
     
     # --- CARD CREATOR ---
     def create_invoice_card(inv):
-        # Unpacking all the values
         inv_id, inv_number, total, status, created_at, payment_method, payment_date, subtotal, tax, discount, patient_name, patient_id = inv
         
-        # Color coding
         status_colors = {
             "Paid": "primary",
             "Unpaid": "error",
@@ -132,16 +121,11 @@ def InvoicesListView():
         }
         status_color = status_colors.get(status, "outline")
         
-        # Format date nicely
-        try:
-            date_obj = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
-            formatted_date = date_obj.strftime("%b %d, %Y")
-        except:
-            formatted_date = created_at
+        formatted_date = created_at
         
         return ft.Container(
             content=ft.Column([
-                # Header: Invoice # and Status Badge
+                # Header
                 ft.Row([
                     ft.Column([
                         ft.Row([
@@ -160,7 +144,7 @@ def InvoicesListView():
                 
                 ft.Divider(height=10),
                 
-                # Breakdown: Subtotal, Tax, Total
+                # Totals
                 ft.Row([
                     ft.Column([
                         ft.Text("Subtotal", size=11, color="outline"),
@@ -171,10 +155,6 @@ def InvoicesListView():
                         ft.Text(f"₱{tax:,.2f}", size=14, weight="bold"),
                     ], spacing=2),
                     ft.Column([
-                        ft.Text("Discount", size=11, color="outline"),
-                        ft.Text(f"₱{discount:,.2f}", size=14, weight="bold", color="error"),
-                    ], spacing=2),
-                    ft.Column([
                         ft.Text("Total", size=11, color="outline"),
                         ft.Text(f"₱{total:,.2f}", size=16, weight="bold", color="primary"),
                     ], spacing=2),
@@ -182,27 +162,19 @@ def InvoicesListView():
                 
                 ft.Container(height=5),
                 
-                # Payment Info
-                ft.Row([
-                    ft.Icon(ft.Icons.PAYMENT, size=14, color="outline"),
-                    ft.Text(f"Method: {payment_method or 'Not specified'}", size=12, color="outline"),
-                    ft.Text("•", size=12, color="outline"),
-                    ft.Text(f"Date: {formatted_date}", size=12, color="outline"),
-                ], spacing=5),
-                
-                # If paid, show date
+                # Payment Date info
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color="primary"),
-                        ft.Text(f"Paid on: {payment_date or 'Not paid yet'}", size=12, italic=True),
+                        ft.Text(f"Paid on: {payment_date}", size=12, italic=True),
                     ], spacing=5),
-                    visible=status == "Paid" and payment_date is not None,
+                    visible=status == "Paid",
                     bgcolor=ft.Colors.with_opacity(0.1, "primary"),
                     padding=8,
                     border_radius=5,
                 ),
                 
-                # Action Buttons
+                # Buttons
                 ft.Row([
                     ft.ElevatedButton(
                         "View Details",
@@ -211,22 +183,22 @@ def InvoicesListView():
                         color="white",
                         on_click=lambda e, inv_id=inv_id: view_invoice_detail(e, inv_id),
                     ),
+                    
+                    # Mark as Paid
                     ft.OutlinedButton(
                         "Mark as Paid",
                         icon=ft.Icons.PAYMENT,
-                        disabled=status == "Paid",
+                        disabled=(status == "Paid" or status == "Cancelled"),
                         on_click=lambda e, inv_id=inv_id: mark_as_paid(e, inv_id),
                     ),
-                    ft.OutlinedButton(
-                        "Print",
-                        icon=ft.Icons.PRINT,
-                        on_click=lambda e, inv_id=inv_id: print_invoice(e, inv_id),
-                    ),
-                    ft.IconButton(
+                    
+                    # Cancel Button
+                    ft.TextButton(
+                        "Cancel Invoice",
                         icon=ft.Icons.DELETE,
                         icon_color="error",
-                        tooltip="Cancel Invoice",
-                        disabled=status == "Paid",
+                        style=ft.ButtonStyle(color="error"),
+                        disabled=(status == "Paid" or status == "Cancelled"),
                         on_click=lambda e, inv_id=inv_id: cancel_invoice(e, inv_id),
                     ),
                 ], spacing=10, wrap=True),
@@ -234,98 +206,64 @@ def InvoicesListView():
             padding=20,
             border=ft.border.all(1, "outlineVariant"),
             border_radius=10,
-            bgcolor="surface", # Ensures dark mode visibility
+            bgcolor="surface",
         )
     
-    # --- HELPER FUNCTIONS ---
+    # --- HELPERS ---
     def view_invoice_detail(e, inv_id):
         e.page.go(f"/billing/invoice/{inv_id}")
     
     def mark_as_paid(e, inv_id):
         conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("""
-                UPDATE invoices 
-                SET status = 'Paid',
-                    payment_date = ?
-                WHERE id = ?
-            """, (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), inv_id))
-            
-            cursor.execute("""
-                INSERT INTO activity_log (user_id, action, details, timestamp)
-                VALUES (?, 'payment_received', ?, ?)
-            """, (user['id'], f"Marked invoice #{inv_id} as paid", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            
-            conn.commit()
-            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Invoice #{inv_id} marked as paid!"), bgcolor="primary")
-            e.page.snack_bar.open = True
-        except Exception as ex:
-            conn.rollback()
-            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor="error")
-            e.page.snack_bar.open = True
-        finally:
-            conn.close()
-            load_invoices(e)
+        conn.execute("""
+            UPDATE invoices 
+            SET status = 'Paid',
+                payment_date = ?
+            WHERE id = ?
+        """, (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), inv_id))
+        
+        conn.commit()
+        conn.close()
+        
+        e.page.snack_bar = ft.SnackBar(content=ft.Text("Marked as Paid!"), bgcolor="primary")
+        e.page.snack_bar.open = True
+        e.page.update()
+        
+        load_invoices(e)
     
     def cancel_invoice(e, inv_id):
         conn = get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute("UPDATE invoices SET status = 'Cancelled' WHERE id = ?", (inv_id,))
-            cursor.execute("""
-                INSERT INTO activity_log (user_id, action, details, timestamp)
-                VALUES (?, 'invoice_cancelled', ?, ?)
-            """, (user['id'], f"Cancelled invoice #{inv_id}", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            conn.commit()
-            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Invoice #{inv_id} cancelled."), bgcolor="error")
-            e.page.snack_bar.open = True
-        except Exception as ex:
-            conn.rollback()
-            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor="error")
-            e.page.snack_bar.open = True
-        finally:
-            conn.close()
-            load_invoices(e)
-    
-    def print_invoice(e, inv_id):
-        e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Printing invoice #{inv_id}..."), bgcolor="primary")
+        conn.execute("UPDATE invoices SET status = 'Cancelled' WHERE id = ?", (inv_id,))
+        conn.commit()
+        conn.close()
+        
+        e.page.snack_bar = ft.SnackBar(content=ft.Text("Invoice Cancelled!"), bgcolor="error")
         e.page.snack_bar.open = True
         e.page.update()
+        
+        load_invoices(e)
     
     # --- LOAD INVOICES ---
     def load_invoices(e=None):
         invoices_container.controls.clear()
         
-        status = status_filter.value
-        payment_method = payment_method_filter.value
-        date_start = date_from.value
-        date_end = date_to.value
-        search = search_field.value if search_field.value else ""
-        
-        invoices = get_invoices_from_db(status, payment_method, date_start, date_end, search)
+        invoices = get_invoices_from_db(
+            status_filter.value,
+            payment_method_filter.value,
+            date_from.value,
+            date_to.value,
+            search_field.value
+        )
         
         if invoices:
-            # Summary
             total_amount = sum(inv[2] for inv in invoices)
-            paid_amount = sum(inv[2] for inv in invoices if inv[3] == "Paid")
-            pending_amount = sum(inv[2] for inv in invoices if inv[3] == "Unpaid")
             
             invoices_container.controls.append(
                 ft.Container(
-                    content=ft.Column([
-                        ft.Row([
-                            ft.Icon(ft.Icons.INFO_OUTLINE, color="primary"),
-                            ft.Text(f"Showing {len(invoices)} invoice(s)", size=16, weight="bold"),
-                        ], spacing=10),
-                        ft.Row([
-                            ft.Text(f"Total: ₱{total_amount:,.2f}", size=14, color="outline"),
-                            ft.Text("•", size=14, color="outline"),
-                            ft.Text(f"Paid: ₱{paid_amount:,.2f}", size=14, color="primary"),
-                            ft.Text("•", size=14, color="outline"),
-                            ft.Text(f"Pending: ₱{pending_amount:,.2f}", size=14, color="error"),
-                        ], spacing=5),
-                    ], spacing=5),
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.INFO_OUTLINE, color="primary"),
+                        ft.Text(f"Showing {len(invoices)} invoice(s) | Total: ₱{total_amount:,.2f}", weight="bold"),
+                    ]),
                     padding=15,
                     bgcolor=ft.Colors.with_opacity(0.05, "primary"),
                     border_radius=8,
@@ -335,7 +273,7 @@ def InvoicesListView():
             for inv in invoices:
                 invoices_container.controls.append(create_invoice_card(inv))
         else:
-            # Empty State - CENTERED FIXED
+            # Centered empty state
             invoices_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -344,20 +282,16 @@ def InvoicesListView():
                         ft.Text("Try adjusting your filters or create a new invoice", size=14, color="outline"),
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                     padding=50,
-                    alignment=ft.alignment.center, # Forces center alignment
+                    alignment=ft.alignment.center, 
                 )
             )
         
-        if e and hasattr(e, 'page'):
+        # Only update the page if an event 'e' exists
+        if e: 
             e.page.update()
     
-    # Initial load trick
-    class FakePage:
-        snack_bar = None
-        def update(self): pass
-        def go(self, route): pass
-    
-    load_invoices(type('Event', (), {'page': FakePage()})())
+    # FIX: Pass 'None' for initial load instead of a Fake class
+    load_invoices(None)
     
     # --- PAGE LAYOUT ---
     return ft.Column([
@@ -369,7 +303,7 @@ def InvoicesListView():
         
         ft.Container(
             content=ft.Column([
-                # New Invoice Button
+                # Create Button
                 ft.Row([
                     ft.ElevatedButton(
                         "Create New Invoice",
@@ -377,7 +311,7 @@ def InvoicesListView():
                         bgcolor="primary",
                         color="white",
                         on_click=lambda e: e.page.go("/billing/create-invoice"),
-                    ),
+                    )
                 ]),
                 
                 ft.Container(height=20),
@@ -392,7 +326,7 @@ def InvoicesListView():
                     date_to,
                 ], spacing=10, wrap=True),
                 
-                # Search and Filter Buttons (REFRESH BUTTON REMOVED)
+                # Search Bar
                 ft.Row([
                     search_field,
                     ft.ElevatedButton(

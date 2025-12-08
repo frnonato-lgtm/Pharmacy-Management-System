@@ -62,7 +62,7 @@ def CreateInvoicesView():
         border_color="outline",
     )
     
-    notes_field = ft.TextField(label="Notes (Optional)", multiline=True, min_lines=3, max_lines=5, width=700, border_color="outline") # INCREASED WIDTH
+    notes_field = ft.TextField(label="Notes (Optional)", multiline=True, min_lines=3, max_lines=5, width=700, border_color="outline")
     
     # --- CALCULATIONS ---
     def calculate_total(e):
@@ -143,13 +143,12 @@ def CreateInvoicesView():
             e.page.update()
     
     # --- PAGE LAYOUT ---
-    # I set this container width to 800 to make it wider and more professional
     return ft.Column([
         NavigationHeader(
             "Create Invoice",
             "Generate invoice for patient billing",
             show_back=True,
-            back_route="/billing/invoices"
+            back_route="/billing/invoices" # Header back button still goes to list
         ),
         
         ft.Container(
@@ -191,12 +190,13 @@ def CreateInvoicesView():
                     ft.OutlinedButton(
                         "Cancel",
                         icon=ft.Icons.CANCEL,
-                        on_click=lambda e: e.page.go("/billing/invoices"),
+                        # FIX: Redirects to Dashboard now
+                        on_click=lambda e: e.page.go("/dashboard"),
                         style=ft.ButtonStyle(padding=15, shape=ft.RoundedRectangleBorder(radius=8)),
                     ),
                 ], spacing=10),
             ], spacing=0),
-            padding=40, # Added more padding for a cleaner look
-            width=900, # WIDER LAYOUT (Requested fix)
+            padding=40,
+            width=900,
         ),
     ], scroll=ft.ScrollMode.AUTO, spacing=0)
