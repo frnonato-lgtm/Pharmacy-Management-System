@@ -68,7 +68,7 @@ pip install -r requirements.txt
 ### 4. Initialize Database (Important!)
 You must run the migration script to create the tables and seed the database with the 54 medicines and default users.
 
-1. **Check for old data:** If a `pharmacy.db` file already exists in `src/storage/`, delete it to ensure a fresh start.
+1. **Check for old data:** If a `pharmacy.db` file already exists in `src/storage/`, **delete it** to ensure a fresh start.
 2. **Run the seed script:**
 ```bash
 python src/services/db_migration.py
