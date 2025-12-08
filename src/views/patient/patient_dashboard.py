@@ -73,6 +73,16 @@ def PatientDashboard():
     """, (user_id,))
     recent_prescriptions = cursor.fetchall()
     
+    # Get low stock medicines (for patient awareness)
+    cursor.execute("""
+        SELECT name, stock
+        FROM medicines
+        WHERE stock < 10 
+        ORDER BY stock ASC
+        LIMIT 15
+    """)
+    low_stock_medicines = cursor.fetchall()
+    
     conn.close()
     
     # Stats cards
@@ -193,6 +203,30 @@ def PatientDashboard():
     
     # Build notifications
     notification_widgets = []
+    
+    # Add low stock alert first (if any)
+    if low_stock_medicines:
+        notification_widgets.append(
+            ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Icon(ft.Icons.WARNING, color="error", size=24),
+                        ft.Text("Low Stock Alert", size=13, weight="bold", color="error"),
+                    ], spacing=5),
+                    ft.Text(
+                        f"{len(low_stock_medicines)} medicine(s) running low. Order soon!",
+                        size=11,
+                        color="outline"
+                    ),
+                ], spacing=3),
+                padding=10,
+                border=ft.border.all(1, "error"),
+                border_radius=8,
+                bgcolor=ft.Colors.with_opacity(0.05, "error"),
+            )
+        )
+    
+    # Add prescription notifications
     if recent_prescriptions:
         for presc in recent_prescriptions:
             status = presc[1]
@@ -217,7 +251,9 @@ def PatientDashboard():
                         "tertiary"
                     )
                 )
-    else:
+    
+    # If no notifications at all
+    if not notification_widgets:
         notification_widgets.append(
             ft.Container(
                 content=ft.Column([

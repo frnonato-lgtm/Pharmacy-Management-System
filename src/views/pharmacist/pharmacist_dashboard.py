@@ -68,9 +68,9 @@ def PharmacistDashboard():
     cursor.execute("""
         SELECT name, stock
         FROM medicines
-        WHERE stock < 10 AND stock > 0
+        WHERE stock < 10  
         ORDER BY stock ASC
-        LIMIT 3
+        LIMIT 15
     """)
     low_stock_medicines = cursor.fetchall()
     
@@ -224,17 +224,33 @@ def PharmacistDashboard():
     # Build alerts
     alert_widgets = []
     
-    # Low stock alerts
-    if low_stock_medicines:
+    # Low stock alerts - REAL COUNT
+    low_stock_count = len(low_stock_medicines)
+    if low_stock_count > 0:
+        # Show actual count
         alert_widgets.append(
             create_alert_item(
-                f"{len(low_stock_medicines)} medicine(s) are low in stock",
+                f"{low_stock_count} medicine(s) are low in stock",
                 ft.Icons.WARNING,
                 "error"
             )
         )
+        
+        # Show the actual medicines
+        for med in low_stock_medicines[:5]:  # Show top 5
+            alert_widgets.append(
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.MEDICATION, size=16, color="error"),
+                        ft.Text(f"{med[0]}: {med[1]} units left", size=12, expand=True),
+                    ], spacing=5),
+                    padding=8,
+                    border=ft.border.all(1, "outlineVariant"),
+                    border_radius=5,
+                )
+            )
     
-    # Pending prescriptions alert
+    # Pending prescriptions alert - REAL COUNT
     if pending_rx > 5:
         alert_widgets.append(
             create_alert_item(
@@ -243,12 +259,20 @@ def PharmacistDashboard():
                 "tertiary"
             )
         )
+    elif pending_rx > 0:
+        alert_widgets.append(
+            create_alert_item(
+                f"{pending_rx} prescription(s) waiting for review",
+                ft.Icons.INFO,
+                "primary"
+            )
+        )
     
     # If no alerts
     if not alert_widgets:
         alert_widgets.append(
             create_alert_item(
-                "All systems normal",
+                "All systems normal - No critical alerts",
                 ft.Icons.CHECK_CIRCLE,
                 "primary"
             )

@@ -89,6 +89,7 @@ class AppLayout(ft.Row):
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="Users"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.ANALYTICS, label="Reports"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.HISTORY, label="Logs"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.INVENTORY, label="Manage Stock"))
         elif role == "Staff":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON_SEARCH, label="Find Patient"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="All Patients"))  
