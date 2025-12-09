@@ -7,7 +7,8 @@ Includes: Pharmacist features + Staff/Patient features + Billing features + 54 M
 import sqlite3
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
 
 # --- FIX: Add the parent directory to system path so we can import 'services' ---
 # This is needed because we are running this script directly from the services folder
@@ -419,31 +420,350 @@ def run_migration_and_seed():
             print("✅ Orders table already has data")
         
         # ============================================
-        # COMMIT CHANGES
+        # PART 7: ENHANCED SAMPLE DATA FOR PRESENTATION
+        # ============================================
+        print("\n📋 Part 7: Enhanced Sample Data for Presentation")
+        print("-" * 50)
+        
+        # Get user IDs for different roles
+        cursor.execute("SELECT id, role FROM users")
+        users = {row[1]: row[0] for row in cursor.fetchall()}
+        
+        # Get patient ID
+        cursor.execute("SELECT id FROM users WHERE username = 'pat' OR role = 'Patient' LIMIT 1")
+        patient_result = cursor.fetchone()
+        patient_id = patient_result[0] if patient_result else users.get('Patient', 1)
+        
+        # Get pharmacist ID
+        pharmacist_id = users.get('Pharmacist', users.get('Admin', 1))
+        
+        # Get billing clerk ID
+        billing_clerk_id = users.get('Admin', 1)
+        
+        # 7.1: Add Activity Log Entries
+        cursor.execute("SELECT COUNT(*) FROM activity_log")
+        if cursor.fetchone()[0] < 5:
+            print("📝 Adding activity log entries...")
+            
+            now = datetime.now()
+            activities = [
+                (pharmacist_id, 'Prescription Review', 'Reviewed and approved prescription #3 for Biogesic', 
+                 (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")),
+                (pharmacist_id, 'Stock Alert', 'Low stock alert for Alaxan FR (5 units remaining)', 
+                 (now - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")),
+                (patient_id, 'Order Placed', 'Placed order #1 for 2 medicine items', 
+                 (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")),
+                (billing_clerk_id, 'Invoice Generated', 'Generated invoice INV-001 for ₱150.00', 
+                 (now - timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S")),
+                (billing_clerk_id, 'Payment Received', 'Received cash payment for invoice INV-001', 
+                 (now - timedelta(hours=7)).strftime("%Y-%m-%d %H:%M:%S")),
+                (pharmacist_id, 'Medicine Dispensed', 'Dispensed prescription #3 to patient', 
+                 (now - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")),
+                (pharmacist_id, 'Stock Update', 'Updated stock for 3 medicines after dispensing', 
+                 (now - timedelta(minutes=45)).strftime("%Y-%m-%d %H:%M:%S")),
+            ]
+            
+            cursor.executemany("""
+                INSERT INTO activity_log (user_id, action, details, timestamp)
+                VALUES (?, ?, ?, ?)
+            """, activities)
+            print(f"✅ Added {len(activities)} activity log entries")
+        else:
+            print("✅ Activity log already has sufficient data")
+        
+        # 7.2: Add More Diverse Prescriptions
+        cursor.execute("SELECT COUNT(*) FROM prescriptions")
+        if cursor.fetchone()[0] < 8:
+            print("📝 Adding diverse prescription samples...")
+            
+            cursor.execute("SELECT id, name FROM medicines WHERE stock > 10 LIMIT 10")
+            available_meds = cursor.fetchall()
+            
+            if available_meds:
+                now = datetime.now()
+                doctors = ['Dr. Smith', 'Dr. Johnson', 'Dr. Williams', 'Dr. Brown', 'Dr. Garcia', 'Dr. Martinez']
+                statuses = ['Pending', 'Approved', 'Rejected', 'Completed']
+                
+                prescriptions = [
+                    # Pending prescriptions (need review)
+                    (patient_id, available_meds[0][0], 'Pending', '500mg', 'Twice daily', 7, 
+                     random.choice(doctors), 'Take after meals', 
+                     (now - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")),
+                    (patient_id, available_meds[1][0] if len(available_meds) > 1 else available_meds[0][0], 
+                     'Pending', '10mg', 'Once daily at bedtime', 30, 
+                     random.choice(doctors), 'For hypertension maintenance', 
+                     (now - timedelta(hours=12)).strftime("%Y-%m-%d %H:%M:%S")),
+                    
+                    # Approved prescriptions (ready to dispense)
+                    (patient_id, available_meds[2][0] if len(available_meds) > 2 else available_meds[0][0], 
+                     'Approved', '250mg', 'Three times daily', 5, 
+                     random.choice(doctors), 'Approved by pharmacist - ready for pickup', 
+                     (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")),
+                    
+                    # Completed prescriptions
+                    (patient_id, available_meds[3][0] if len(available_meds) > 3 else available_meds[0][0], 
+                     'Completed', '400mg', 'Every 6 hours as needed', 3, 
+                     random.choice(doctors), 'Dispensed and completed', 
+                     (now - timedelta(days=5)).strftime("%Y-%m-%d %H:%M:%S")),
+                ]
+                
+                cursor.executemany("""
+                    INSERT INTO prescriptions 
+                    (patient_id, medicine_id, status, dosage, frequency, duration, doctor_name, notes, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, prescriptions)
+                print(f"✅ Added {len(prescriptions)} diverse prescriptions")
+        else:
+            print("✅ Prescriptions already have sufficient variety")
+        
+        # 7.3: Add Multiple Orders with Different Statuses
+        cursor.execute("SELECT COUNT(*) FROM orders")
+        if cursor.fetchone()[0] < 5:
+            print("📝 Adding multiple orders with various statuses...")
+            
+            cursor.execute("SELECT id, price FROM medicines WHERE stock > 0 LIMIT 8")
+            available_meds = cursor.fetchall()
+            
+            if available_meds:
+                now = datetime.now()
+                
+                # Order 1: Pending order (just placed)
+                cursor.execute("""
+                    INSERT INTO orders (patient_id, order_date, status, total_amount, payment_method, payment_status, notes)
+                    VALUES (?, ?, 'Pending', 85.50, NULL, 'Unpaid', 'Awaiting processing')
+                """, (patient_id, (now - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")))
+                order1_id = cursor.lastrowid
+                
+                # Items for pending order
+                cursor.execute("""
+                    INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, 3, ?, ?)
+                """, (order1_id, available_meds[0][0], available_meds[0][1], available_meds[0][1] * 3))
+                cursor.execute("""
+                    INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, 2, ?, ?)
+                """, (order1_id, available_meds[1][0], available_meds[1][1], available_meds[1][1] * 2))
+                
+                # Order 2: Processing order
+                cursor.execute("""
+                    INSERT INTO orders (patient_id, order_date, status, total_amount, payment_method, payment_status, notes)
+                    VALUES (?, ?, 'Processing', 245.00, 'GCash', 'Paid', 'Being prepared for pickup')
+                """, (patient_id, (now - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")))
+                order2_id = cursor.lastrowid
+                
+                # Items for processing order
+                cursor.execute("""
+                    INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, 5, ?, ?)
+                """, (order2_id, available_meds[2][0], available_meds[2][1], available_meds[2][1] * 5))
+                
+                # Order 3: Completed order (yesterday)
+                cursor.execute("""
+                    INSERT INTO orders (patient_id, order_date, status, total_amount, payment_method, payment_status, notes)
+                    VALUES (?, ?, 'Completed', 420.00, 'Cash', 'Paid', 'Picked up by patient')
+                """, (patient_id, (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")))
+                order3_id = cursor.lastrowid
+                
+                # Items for completed order
+                cursor.execute("""
+                    INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, 4, ?, ?)
+                """, (order3_id, available_meds[3][0], available_meds[3][1], available_meds[3][1] * 4))
+                cursor.execute("""
+                    INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, 6, ?, ?)
+                """, (order3_id, available_meds[4][0], available_meds[4][1], available_meds[4][1] * 6))
+                
+                # Order 4: Cancelled order
+                cursor.execute("""
+                    INSERT INTO orders (patient_id, order_date, status, total_amount, payment_method, payment_status, notes)
+                    VALUES (?, ?, 'Cancelled', 155.00, NULL, 'Unpaid', 'Cancelled by patient')
+                """, (patient_id, (now - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")))
+                order4_id = cursor.lastrowid
+                
+                # Items for cancelled order
+                cursor.execute("""
+                    INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
+                    VALUES (?, ?, 2, ?, ?)
+                """, (order4_id, available_meds[5][0], available_meds[5][1], available_meds[5][1] * 2))
+                
+                print("✅ Added 4 orders with different statuses")
+        else:
+            print("✅ Orders already have sufficient variety")
+        
+        # 7.4: Add Sample Invoices with Different Payment Statuses
+        cursor.execute("SELECT COUNT(*) FROM invoices")
+        if cursor.fetchone()[0] < 4:
+            print("📝 Adding sample invoices with various payment statuses...")
+            
+            # Get completed orders for invoice generation
+            cursor.execute("SELECT id, patient_id, total_amount FROM orders WHERE status IN ('Completed', 'Processing') LIMIT 3")
+            completed_orders = cursor.fetchall()
+            
+            now = datetime.now()
+            invoice_counter = 1001
+            
+            for order in completed_orders:
+                order_id, order_patient_id, total = order
+                
+                # Calculate invoice details
+                subtotal = total
+                tax = round(subtotal * 0.12, 2)  # 12% VAT
+                discount = 0 if invoice_counter > 1001 else round(subtotal * 0.10, 2)  # 10% discount for first invoice
+                final_total = round(subtotal + tax - discount, 2)
+                
+                # Determine payment status
+                if invoice_counter == 1001:
+                    status = 'Paid'
+                    payment_date = (now - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+                    payment_method = 'Cash'
+                elif invoice_counter == 1002:
+                    status = 'Partially Paid'
+                    payment_date = (now - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+                    payment_method = 'GCash'
+                else:
+                    status = 'Unpaid'
+                    payment_date = None
+                    payment_method = None
+                
+                cursor.execute("""
+                    INSERT INTO invoices 
+                    (invoice_number, patient_id, order_id, subtotal, tax, discount, total_amount, 
+                     status, payment_method, payment_date, billing_clerk_id, notes, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    f'INV-{invoice_counter}', 
+                    order_patient_id, 
+                    order_id, 
+                    subtotal, 
+                    tax, 
+                    discount, 
+                    final_total,
+                    status, 
+                    payment_method, 
+                    payment_date, 
+                    billing_clerk_id,
+                    f'Generated for order #{order_id}',
+                    (now - timedelta(days=(3-invoice_counter+1000))).strftime("%Y-%m-%d %H:%M:%S")
+                ))
+                
+                invoice_id = cursor.lastrowid
+                
+                # Add payment record if paid
+                if status in ['Paid', 'Partially Paid']:
+                    payment_amount = final_total if status == 'Paid' else round(final_total * 0.5, 2)
+                    cursor.execute("""
+                        INSERT INTO payments 
+                        (invoice_id, amount, payment_method, payment_date, processed_by, notes)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        invoice_id, 
+                        payment_amount, 
+                        payment_method, 
+                        payment_date, 
+                        billing_clerk_id,
+                        f'{status} via {payment_method}'
+                    ))
+                
+                invoice_counter += 1
+            
+            print(f"✅ Added {len(completed_orders)} invoices with payment records")
+        else:
+            print("✅ Invoices already have sufficient data")
+        
+        # 7.5: Add Low Stock Alerts Activity
+        print("📝 Adding low stock alerts to activity log...")
+        cursor.execute("""
+            SELECT name, stock FROM medicines 
+            WHERE stock < 10 AND stock > 0
+        """)
+        low_stock_meds = cursor.fetchall()
+        
+        if low_stock_meds:
+            now = datetime.now()
+            for med_name, stock_count in low_stock_meds[:5]:  # Add alerts for first 5 low stock items
+                cursor.execute("""
+                    INSERT INTO activity_log (user_id, action, details, timestamp)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    pharmacist_id,
+                    'Stock Alert',
+                    f'⚠️ Low stock alert: {med_name} has only {stock_count} units remaining',
+                    (now - timedelta(hours=random.randint(1, 48))).strftime("%Y-%m-%d %H:%M:%S")
+                ))
+            print(f"✅ Added {len(low_stock_meds[:5])} low stock alerts")
+        
+        # 7.6: Add Out of Stock Alerts
+        cursor.execute("""
+            SELECT name FROM medicines WHERE stock = 0
+        """)
+        out_of_stock_meds = cursor.fetchall()
+        
+        if out_of_stock_meds:
+            now = datetime.now()
+            for (med_name,) in out_of_stock_meds[:3]:  # Add alerts for first 3 out of stock items
+                cursor.execute("""
+                    INSERT INTO activity_log (user_id, action, details, timestamp)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    pharmacist_id,
+                    'Stock Critical',
+                    f'🚨 OUT OF STOCK: {med_name} needs immediate restocking',
+                    (now - timedelta(hours=random.randint(1, 72))).strftime("%Y-%m-%d %H:%M:%S")
+                ))
+            print(f"✅ Added {len(out_of_stock_meds[:3])} out of stock alerts")
+        
+        # ============================================
+        # FINAL COMMIT
         # ============================================
         conn.commit()
-        
         print("\n" + "=" * 50)
-        print("🎉 MIGRATION & SEEDING COMPLETED SUCCESSFULLY!")
+        print("✅ MIGRATION & SEEDING COMPLETED SUCCESSFULLY!")
         print("=" * 50)
-        print("\n📋 Summary:")
-        print("   ✅ Activity log table created")
-        print("   ✅ All tables (Orders, Invoices, Prescriptions) verified")
-        print("   ✅ 54 Medicines seeded (with varied stock levels)")
-        print("   ✅ Performance indexes added")
-        print("   ✅ Sample Transactions (Rx/Orders) added")
-        print("\n✨ You can now run 'python main.py'!")
-        print("=" * 50 + "\n")
+        print("\n📊 Database Summary:")
+        
+        # Count statistics
+        cursor.execute("SELECT COUNT(*) FROM medicines")
+        med_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM medicines WHERE stock < 10")
+        low_stock_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM medicines WHERE stock = 0")
+        out_stock_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM prescriptions")
+        rx_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM orders")
+        order_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM invoices")
+        invoice_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM activity_log")
+        activity_count = cursor.fetchone()[0]
+        
+        print(f"  💊 Medicines: {med_count} total")
+        print(f"     ⚠️  Low Stock: {low_stock_count}")
+        print(f"     🚨 Out of Stock: {out_stock_count}")
+        print(f"  📋 Prescriptions: {rx_count}")
+        print(f"  🛒 Orders: {order_count}")
+        print(f"  🧾 Invoices: {invoice_count}")
+        print(f"  📝 Activity Logs: {activity_count}")
+        print("\n🎉 Your database is ready for presentation!")
         
     except Exception as e:
         conn.rollback()
-        print(f"\n❌ Error during migration: {e}")
-        print("   Please check the error and try again.")
+        print(f"\n❌ Error during migration: {str(e)}")
         import traceback
         traceback.print_exc()
-        
     finally:
         conn.close()
 
 if __name__ == "__main__":
-    run_migration_and_seed()
+    print("=" * 70)
+    print("  PHARMACY MANAGEMENT SYSTEM - DATABASE MIGRATION & SEEDING")
+    print("=" * 70)
+    print("\n⚠️  WARNING: This will modify your existing database!")
+    print("    Make sure you have a backup if needed.\n")
+    
+    response = input("Continue? (yes/no): ").strip().lower()
+    if response == 'yes':
+        run_migration_and_seed()
+    else:
+        print("❌ Migration cancelled.")        
