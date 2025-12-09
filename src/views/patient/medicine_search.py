@@ -197,12 +197,6 @@ def MedicineSearch():
                         tooltip="Add to Cart",
                         on_click=lambda e, m_id=med['id'], m_name=med['name']: add_to_cart(m_id, m_name, e)
                     ),
-                    ft.IconButton(
-                        icon=ft.Icons.INFO_OUTLINE,
-                        icon_color="primary",
-                        tooltip="View Details",
-                        on_click=lambda e, m=med: view_medicine_details(m, e)
-                    ),
                 ], spacing=5),
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=15),
             padding=20,
