@@ -276,7 +276,7 @@ def PrescriptionDetailView(prescription_id):
                 ], spacing=10),
             ]
         else:
-            # View mode
+            # View 
             prescription_container.controls = [
                 ft.Row([
                     ft.Icon(ft.Icons.MEDICATION, color="primary", size=32),

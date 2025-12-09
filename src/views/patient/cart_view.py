@@ -380,7 +380,7 @@ def CartView():
         ft.Container(height=20),
         ft.Divider(),
         
-        # Order summary - CENTERED
+        # Order summary 
         ft.Row([
             ft.Container(
                 content=summary_container,

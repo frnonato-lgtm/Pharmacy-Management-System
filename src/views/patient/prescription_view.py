@@ -191,7 +191,7 @@ def PatientPrescriptionsView():
         # Open it using the modern Flet way
         e.page.open(prescription_form)
 
-    # --- MAIN PAGE LAYOUT ---
+    # ---MAIN PAGE LAYOUT---
     return ft.Column([
         # Header Row
         ft.Row([
