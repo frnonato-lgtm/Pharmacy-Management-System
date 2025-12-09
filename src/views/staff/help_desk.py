@@ -81,7 +81,7 @@ def HelpDeskView():
                 ft.Text("Quick Guides", size=20, weight="bold"),
                 ft.Row([
                     create_guide_card("How to Search", [
-                        "Click 'Find Patients' on sidebar",
+                        "Click 'Find Patient' on sidebar",
                         "Type name/phone",
                         "Click Search button"
                     ]),
@@ -104,8 +104,8 @@ def HelpDeskView():
                 ft.Column([
                     create_faq("Can I edit patient info?", "No. Staff access is read-only. Contact an Admin to make changes."),
                     create_faq("How do I report a bug?", "Take a screenshot and email IT Support immediately."),
-                    create_faq("System is slow?", "Try refreshing the page or checking your internet connection."),
-                    create_faq("Forgot Password?", "Ask the System Admin to reset your credentials."),
+                    create_faq("System is slow?", "Try refreshing the page by going on dashboard."),
+                    create_faq("Forgot Password?", "Ask the System Admin to reset your credentials or go to My profile in you dashboard."),
                 ]),
                 
                 ft.Container(height=30),
@@ -113,9 +113,9 @@ def HelpDeskView():
                 # 3. Contact Support Section
                 ft.Text("Need More Help?", size=20, weight="bold"),
                 ft.Row([
-                    create_contact_card("System Admin", "admin@pharmacy.com", "101"),
-                    create_contact_card("Head Pharmacist", "pharm@pharmacy.com", "102"),
-                    create_contact_card("IT Support", "support@pharmacy.com", "103"),
+                    create_contact_card("System Admin", "admin@pharmacy.com",),
+                    create_contact_card("Head Pharmacist", "pharm@pharmacy.com"),
+                    create_contact_card("Staff Support", "support@pharmacy.com"),
                 ]),
                 
                 ft.Container(height=20),

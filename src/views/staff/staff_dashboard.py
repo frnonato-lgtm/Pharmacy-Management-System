@@ -177,7 +177,7 @@ def StaffDashboard():
                             ft.Container(
                                 content=ft.Row([
                                     ft.Icon(ft.Icons.LOCK, color="tertiary"),
-                                    ft.Text("You have Read-Only access to medical records.", size=12, expand=True)
+                                    ft.Text("You have Read-Only access to patients.", size=12, expand=True)
                                 ], spacing=10),
                                 padding=15,
                                 bgcolor=ft.Colors.with_opacity(0.1, "tertiary"),
