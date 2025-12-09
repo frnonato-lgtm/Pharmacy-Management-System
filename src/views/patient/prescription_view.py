@@ -7,40 +7,50 @@ from datetime import datetime
 
 def PatientPrescriptionsView():
     """View patient's own prescriptions and submit new ones."""
-    #
-    # 1. Get the current user
+    
+    # 1. First, we get the current user to know who is logged in
     user = AppState.get_user()
     
-    # 2. Get their prescription history from the DB
+    # 2. Connect to the database to get the history
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # We select the specific columns we need for the list
     cursor.execute("""
         SELECT id, status, notes, created_at 
         FROM prescriptions 
         WHERE patient_id = ? 
         ORDER BY created_at DESC
     """, (user['id'],))
+    
     prescriptions = cursor.fetchall()
     conn.close()
     
-    # Helper to make the status badge look nice
+    # This helper function creates the colorful card for each prescription in the list
     def create_prescription_card(rx):
-        # Choose color based on status
+        # Define colors for different statuses
         status_colors = {
             "Pending": ("tertiary", ft.Icons.PENDING_ACTIONS),
             "Approved": ("primary", ft.Icons.CHECK_CIRCLE),
             "Rejected": ("error", ft.Icons.CANCEL),
         }
+        
+        # Get the color and icon based on status, default to gray if unknown
         color, icon = status_colors.get(rx['status'], ("outline", ft.Icons.INFO))
         
+        # Return the UI container
         return ft.Container(
             content=ft.Column([
+                # Top row with ID and Date
                 ft.Row([
                     ft.Column([
                         ft.Text(f"Prescription #{rx['id']}", size=16, weight="bold"),
+                        # Slice the date string to remove seconds/decimals
                         ft.Text(f"Submitted: {rx['created_at'][:16] if rx['created_at'] else 'N/A'}", 
                                size=12, color="outline"),
                     ], expand=True),
+                    
+                    # The status badge on the right
                     ft.Container(
                         content=ft.Row([
                             ft.Icon(icon, size=16, color=color),
@@ -51,7 +61,8 @@ def PatientPrescriptionsView():
                         border_radius=15,
                     ),
                 ]),
-                # Show notes only if they exist
+                
+                # If there are notes (like rejection reasons), show them
                 ft.Divider(height=10) if rx['notes'] else ft.Container(),
                 ft.Text(rx['notes'], size=13, italic=True) if rx['notes'] else ft.Container(),
             ], spacing=8),
@@ -61,11 +72,10 @@ def PatientPrescriptionsView():
             bgcolor=ft.Colors.with_opacity(0.05, color),
         )
     
-    # --- THIS IS THE POPUP FORM LOGIC ---
+    # --- LOGIC FOR THE "NEW PRESCRIPTION" POPUP ---
     def submit_prescription_dialog(e):
-        print("Submit button clicked!") 
         
-        # Define a consistent style for all inputs
+        # A helper to make all input fields look the same
         def create_input(label, multiline=False, keyboard_type=None):
             return ft.TextField(
                 label=label,
@@ -77,48 +87,60 @@ def PatientPrescriptionsView():
                 keyboard_type=keyboard_type if keyboard_type else None,
             )
 
-        # Create the inputs with ALL necessary fields
+        # Define the input fields
         doctor_name = create_input("Doctor's Name *")
         medicine_name = create_input("Medicine Prescribed *")
-        dosage = create_input("Dosage (e.g., 500ml, 2 tablets) *")
-        frequency = create_input("Frequency (e.g., Once daily, Twice daily) *")
+        dosage = create_input("Dosage (e.g., 500mg, 1 tablet) *")
+        frequency = create_input("Frequency (e.g., Once daily) *")
+        # Ensure duration is a number for the database
         duration = create_input("Duration (in days) *", keyboard_type=ft.KeyboardType.NUMBER)
         additional_notes = create_input("Additional Notes", multiline=True)
         
-        # Error message label (hidden by default)
+        # A hidden text field for showing error messages
         error_text = ft.Text("", color="error", size=12)
         
-        # What happens when they click "Submit" inside the popup
+        # The logic that runs when "Submit" is clicked
         def save_prescription(dialog_e):
-            # Basic validation
+            # 1. Validation: Check if required fields are empty
             if not all([doctor_name.value, medicine_name.value, dosage.value, frequency.value, duration.value]):
                 error_text.value = "Please fill in all required fields!"
                 dialog_e.control.page.update()
                 return
             
-            # Validate duration is a number
+            # 2. Validation: Check if duration is actually a number
             try:
                 duration_days = int(duration.value)
             except:
-                error_text.value = "Duration must be a number (in days)"
+                error_text.value = "Duration must be a number (days)"
                 dialog_e.control.page.update()
                 return
             
-            # Save to database
             try:
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 
-                # Combine info into a structured notes string
+                # --- FIX: AUTO-DETECT MEDICINE ---
+                # We search the database for the medicine name the user typed.
+                # If it exists, we grab its ID. This links the prescription to the inventory.
+                cursor.execute("SELECT id FROM medicines WHERE name LIKE ?", (f"%{medicine_name.value}%",))
+                match = cursor.fetchone()
+                
+                # If match found, use the ID. If not, it's None (Pharmacist will fix it later)
+                medicine_id = match[0] if match else None
+                
+                # Create a combined note string for legacy support
                 notes_text = f"Doctor: {doctor_name.value}\nMedicine: {medicine_name.value}\nDosage: {dosage.value}\nFrequency: {frequency.value}\nDuration: {duration_days} days\nNotes: {additional_notes.value or 'None'}"
                 
-                # Insert with structured fields
+                # --- FIX: INSERT CORRECT DATA ---
+                # We are explicitly inserting dosage, frequency, duration, and doctor_name
+                # into their specific columns so they don't get mixed up.
                 cursor.execute("""
                     INSERT INTO prescriptions 
-                    (patient_id, status, notes, created_at, dosage, frequency, duration, doctor_name)
-                    VALUES (?, 'Pending', ?, ?, ?, ?, ?, ?)
+                    (patient_id, medicine_id, status, notes, created_at, dosage, frequency, duration, doctor_name)
+                    VALUES (?, ?, 'Pending', ?, ?, ?, ?, ?, ?)
                 """, (
                     user['id'], 
+                    medicine_id, # This links to the stock!
                     notes_text, 
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     dosage.value,
@@ -130,10 +152,10 @@ def PatientPrescriptionsView():
                 conn.commit()
                 conn.close()
                 
-                # Close the dialog
+                # Close the popup
                 dialog_e.control.page.close(prescription_form)
                 
-                # Show success snackbar
+                # Show success message
                 dialog_e.control.page.snack_bar = ft.SnackBar(
                     content=ft.Text("Prescription submitted! Waiting for review."),
                     bgcolor="primary"
@@ -141,15 +163,15 @@ def PatientPrescriptionsView():
                 dialog_e.control.page.snack_bar.open = True
                 dialog_e.control.page.update()
                 
-                # Refresh the page to show the new item
+                # Reload the page to show the new item
                 dialog_e.control.page.go("/patient/prescriptions")
                 
             except Exception as ex:
-                print(f"Error saving: {ex}")
+                # If something crashes, show the error
                 error_text.value = f"Error: {str(ex)}"
                 dialog_e.control.page.update()
 
-        # The actual Dialog Popup
+        # The actual Dialog Window UI
         prescription_form = ft.AlertDialog(
             modal=True,
             title=ft.Row([
@@ -163,7 +185,6 @@ def PatientPrescriptionsView():
                 padding=10,
                 content=ft.Column([
                     ft.Text("Enter details from your doctor's prescription:", size=13, color="outline"),
-                    ft.Divider(height=10, color="transparent"),
                     doctor_name,
                     medicine_name,
                     dosage,
@@ -188,12 +209,12 @@ def PatientPrescriptionsView():
             actions_padding=20,
         )
         
-        # Open it using the modern Flet way
+        # Open the dialog
         e.page.open(prescription_form)
 
-    # ---MAIN PAGE LAYOUT---
+    # --- MAIN PAGE LAYOUT ---
     return ft.Column([
-        # Header Row
+        # The top header section
         ft.Row([
             ft.Icon(ft.Icons.MEDICAL_SERVICES, color="primary", size=32),
             ft.Column([
@@ -201,7 +222,7 @@ def PatientPrescriptionsView():
                 ft.Text("Submit prescription requests and track their status", size=14, color="outline"),
             ], spacing=5, expand=True),
             
-            # The Button that triggers the popup
+            # The big button to add a prescription
             ft.ElevatedButton(
                 content=ft.Row([
                     ft.Icon(ft.Icons.ADD, color="white"),
@@ -215,7 +236,7 @@ def PatientPrescriptionsView():
         
         ft.Container(height=20),
         
-        # Info Box
+        # Instructions / Info box
         ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -234,11 +255,11 @@ def PatientPrescriptionsView():
         
         ft.Container(height=20),
         
-        # The List Title
+        # Title for the list
         ft.Text(f"Your Prescriptions ({len(prescriptions)})", size=20, weight="bold"),
         ft.Container(height=10),
         
-        # The List Logic
+        # The list of cards OR an empty state message
         ft.Column([
             create_prescription_card(rx) for rx in prescriptions
         ], spacing=10) if prescriptions else ft.Container(
