@@ -63,7 +63,8 @@ def AllPatientsView():
                     icon=ft.Icons.VISIBILITY,
                     tooltip="View Details",
                     icon_color="primary",
-                    on_click=lambda e, pid=patient['id']: e.page.go(f"/staff/patient/{pid}")
+                    # PASS '/all' AT THE END SO IT KNOWS TO COME BACK HERE
+                    on_click=lambda e, pid=patient['id']: e.page.go(f"/staff/patient/{pid}/all")
                 )
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             
@@ -152,7 +153,7 @@ def AllPatientsView():
     ], 
     scroll=ft.ScrollMode.AUTO, 
     spacing=0,
-    # Forces content to stick to the TOP
+    # THIS FIXES THE GAP AT THE TOP
     alignment=ft.MainAxisAlignment.START,
     expand=True
     )

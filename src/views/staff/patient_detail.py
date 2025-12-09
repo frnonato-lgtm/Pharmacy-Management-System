@@ -4,7 +4,7 @@ import flet as ft
 from services.database import get_db_connection
 from components.navigation_header import NavigationHeader
 
-def StaffPatientDetail(patient_id):
+def StaffPatientDetail(patient_id, source="search"):
     """Display detailed patient information (read-only)."""
     
     # 1. Fetch Patient Data from DB
@@ -14,10 +14,14 @@ def StaffPatientDetail(patient_id):
     row = cursor.fetchone()
     conn.close()
     
-    # Handle error if patient not found
+    # Determine back route based on source
+    back_route = "/staff/patients" if source == "all" else "/staff/search"
+    back_title = "All Patients" if source == "all" else "Patient Search"
+    
+    # Handle case where patient not found
     if not row:
         return ft.Column([
-            NavigationHeader("Error", show_back=True, back_route="/staff/search"),
+            NavigationHeader("Error", show_back=True, back_route=back_route),
             ft.Text("Patient not found", color="error")
         ])
     
@@ -47,8 +51,13 @@ def StaffPatientDetail(patient_id):
     
     # --- LAYOUT ---
     return ft.Column([
-        # Keep back button here so they can return to search
-        NavigationHeader(f"Patient: {patient['full_name']}", "View Details (Read-Only)", show_back=True, back_route="/staff/search"),
+        # Dynamic back route based on where user came from
+        NavigationHeader(
+            f"Patient: {patient['full_name']}", 
+            "View Details (Read-Only)", 
+            show_back=True, 
+            back_route=back_route
+        ),
         
         ft.Container(
             padding=20,

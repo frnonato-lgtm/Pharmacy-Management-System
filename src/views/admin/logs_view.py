@@ -21,6 +21,7 @@ def SystemLogs():
         ],
         value="all",
         width=250,
+        border_color="primary", # Dark mode fix
     )
     
     date_filter = ft.Dropdown(
@@ -33,12 +34,13 @@ def SystemLogs():
         ],
         value="week",
         width=200,
+        border_color="primary", # Dark mode fix
     )
     
     search_field = ft.TextField(
         hint_text="Search logs...",
         prefix_icon=ft.Icons.SEARCH,
-        border_color="outline",
+        border_color="primary", # Dark mode fix
         width=300,
     )
     
@@ -158,6 +160,28 @@ def SystemLogs():
                 "icon": ft.Icons.RECEIPT,
                 "color": "tertiary",
             })
+            
+        # 6. Real Activity Logs (If available in DB)
+        try:
+            cursor.execute("""
+                SELECT timestamp, user_id, action, details 
+                FROM activity_log 
+                ORDER BY timestamp DESC 
+                LIMIT 30
+            """)
+            activities = cursor.fetchall()
+            for act in activities:
+                logs.append({
+                    "timestamp": act[0],
+                    "user": str(act[1]), # User ID
+                    "action": act[2],
+                    "details": act[3],
+                    "type": "system",
+                    "icon": ft.Icons.SETTINGS,
+                    "color": "secondary",
+                })
+        except:
+            pass # Table might not exist
         
         conn.close()
         
@@ -209,7 +233,7 @@ def SystemLogs():
             padding=15,
             border=ft.border.all(1, "outlineVariant"),
             border_radius=10,
-            bgcolor="surface",
+            bgcolor="surface", # Dark mode fix
         )
     
     def get_time_ago(log_time):
@@ -297,42 +321,6 @@ def SystemLogs():
         if e:
             e.page.update()
     
-    def export_logs(e):
-        """Export logs to file."""
-        e.page.snack_bar = ft.SnackBar(
-            content=ft.Text("Export feature coming soon!"),
-            bgcolor="secondary",
-        )
-        e.page.snack_bar.open = True
-        e.page.update()
-    
-    def clear_logs(e):
-        """Clear old logs (with confirmation)."""
-        def confirm_clear(dialog_e):
-            dialog.open = False
-            e.page.snack_bar = ft.SnackBar(
-                content=ft.Text("This would clear old logs (feature not yet implemented)"),
-                bgcolor="primary",
-            )
-            e.page.snack_bar.open = True
-            e.page.update()
-        
-        def cancel_clear(dialog_e):
-            dialog.open = False
-            e.page.update()
-        
-        dialog = ft.AlertDialog(
-            title=ft.Text("Confirm Clear Logs"),
-            content=ft.Text("Are you sure you want to clear logs older than 30 days? This action cannot be undone."),
-            actions=[
-                ft.TextButton("Cancel", on_click=cancel_clear),
-                ft.ElevatedButton("Clear Logs", bgcolor="error", color="onError", on_click=confirm_clear),
-            ],
-        )
-        e.page.dialog = dialog
-        dialog.open = True
-        e.page.update()
-    
     # Initial load
     class FakePage:
         dialog = None
@@ -366,18 +354,7 @@ def SystemLogs():
                         color="onPrimary",
                         on_click=load_logs,
                     ),
-                    ft.ElevatedButton(
-                        "Export Logs",
-                        icon=ft.Icons.DOWNLOAD,
-                        bgcolor="secondary",
-                        color="onSecondary",
-                        on_click=export_logs,
-                    ),
-                    ft.OutlinedButton(
-                        "Clear Old Logs",
-                        icon=ft.Icons.DELETE_SWEEP,
-                        on_click=clear_logs,
-                    ),
+                    # REMOVED EXPORT AND CLEAR BUTTONS
                 ], spacing=10, wrap=True),
             ], spacing=15),
             padding=20,

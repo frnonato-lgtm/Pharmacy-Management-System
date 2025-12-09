@@ -15,13 +15,11 @@ from views.patient.orders_view import OrdersView
 from views.patient.profile_view import ProfileView
 from views.patient.prescription_view import PatientPrescriptionsView
 from views.patient.invoices_view import PatientInvoicesView
-#from views.patient.order_detail_view import OrderDetailView
 
 from views.admin.admin_dashboard import AdminDashboard
 from views.admin.user_management import UserManagement
 from views.admin.reports_view import ReportsView as AdminReportsView
 from views.admin.logs_view import SystemLogs
-##from views.audit_log_viewer import AuditLogViewer
 
 from views.inventory.inventory_dashboard import InventoryDashboard
 from views.inventory.manage_stock import ManageStock
@@ -153,15 +151,31 @@ def main(page: ft.Page):
             elif troute == "/admin/users": content = UserManagement()
             elif troute == "/admin/reports": content = AdminReportsView()
             elif troute == "/admin/logs": content = SystemLogs()
-            #elif troute == "/admin/audit": content = AuditLogViewer()
+
             # 7. Staff Views
             elif troute == "/staff/search": content = StaffPatientSearch()
-            #elif troute == "/staff/patients": content = StaffPatientDetail()
             elif troute == "/staff/patients": content = AllPatientsView() 
             elif troute == "/staff/help": content = HelpDeskView()
+            
+            # This detects the patient detail view
             elif troute.startswith("/staff/patient/"):
-                patient_id = troute.split("/")[-1]
-                content = StaffPatientDetail(patient_id)
+                # Break down the URL: /staff/patient/ID/SOURCE
+                parts = troute.split("/")
+                
+                if len(parts) >= 4:
+                    patient_id = parts[3] # Grab the ID
+                    
+                    # Check if we passed a source (where we came from)
+                    source = "search" # Default to search
+                    if len(parts) > 4:
+                        source = parts[4] # e.g., 'all'
+                    
+                    content = StaffPatientDetail(patient_id, source)
+                else:
+                    # Fallback
+                    page.go("/staff/search")
+                    return
+
             page.views.append(create_view(troute, [AppLayout(page, content)], None))
         
         page.update()
