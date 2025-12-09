@@ -132,20 +132,7 @@ def PharmacistMedicineSearch():
                                 
                                 ft.Divider(height=10),
                                 
-                                ft.Row([
-                                    ft.ElevatedButton(
-                                        "View Full Details",
-                                        icon=ft.Icons.INFO,
-                                        bgcolor="primary",
-                                        color="white",
-                                        on_click=lambda e, m=med: view_medicine_details(e, m),
-                                    ),
-                                    ft.OutlinedButton(
-                                        "Update Stock",
-                                        icon=ft.Icons.EDIT,
-                                        on_click=lambda e, m=med: update_stock(e, m),
-                                    ),
-                                ], spacing=10),
+                                ft.Row([], spacing=10),
                             ], spacing=10),
                             padding=15,
                             bgcolor=ft.Colors.with_opacity(0.05, "primary"),
