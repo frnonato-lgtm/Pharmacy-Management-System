@@ -109,6 +109,14 @@ def main(page: ft.Page):
             elif troute == "/patient/profile": content = ProfileView()
             elif troute == "/patient/prescriptions" : content = PatientPrescriptionsView()
             elif troute == "/patient/invoices": content = PatientInvoicesView()
+            elif troute.startswith("/patient/invoice/"):
+                inv_id = troute.split("/")[-1]
+                try:
+                    inv_id = int(inv_id)
+                    content = InvoiceDetailView(inv_id)
+                except (ValueError, IndexError):
+                    page.go("/patient/invoices")
+                    return
             
             # 3. Pharmacist Views
             elif troute == "/pharmacist/prescriptions": content = PharmacistPrescriptionsView()
