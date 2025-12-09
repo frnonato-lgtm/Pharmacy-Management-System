@@ -7,18 +7,18 @@ from datetime import datetime
 def UserManagement():
     """User management interface with full CRUD operations."""
     
-    # This list holds all the user cards
+    # This column holds the list of user cards
     users_container = ft.Column(spacing=10)
     
-    # Search box to find users
+    # Search box
     search_field = ft.TextField(
         hint_text="Search users...",
         prefix_icon=ft.Icons.SEARCH,
-        border_color="primary", # Added color so it shows in dark mode
+        border_color="primary", # Visible in dark mode
         width=300,
     )
    
-    # Dropdown to filter by role (Admin, Patient, etc.)
+    # Filter by role
     role_filter = ft.Dropdown(
         label="Filter by Role",
         options=[
@@ -32,17 +32,16 @@ def UserManagement():
         ],
         value="All",
         width=200,
-        border_color="primary", # Fix for dark mode visibility
+        border_color="primary", 
     )
     
-    # This function loads the users from the database
+    # Function to load users from the database
     def load_users(e=None):
         try:
-            # Get values from the search box and dropdown
+            # Get filter values
             query = search_field.value.lower() if search_field.value else ""
             role = role_filter.value
             
-            # Connect to database
             conn = get_db_connection()
             cursor = conn.cursor()
             
@@ -50,28 +49,28 @@ def UserManagement():
             sql = "SELECT * FROM users WHERE 1=1"
             params = []
             
-            # Add search condition if typed
+            # Add search filter
             if query:
                 sql += " AND (LOWER(username) LIKE ? OR LOWER(full_name) LIKE ?)"
                 params.extend([f"%{query}%", f"%{query}%"])
             
-            # Add role filter if selected
+            # Add role filter
             if role != "All":
                 sql += " AND role = ?"
                 params.append(role)
             
-            # Sort by newest first
+            # Sort newest first
             sql += " ORDER BY created_at DESC"
             
             cursor.execute(sql, params)
             users = cursor.fetchall()
             conn.close()
             
-            # Clear the current list
+            # Clear the list so we don't add duplicates
             users_container.controls.clear()
             
             if users:
-                # Add the table header
+                # Add the header row
                 users_container.controls.append(
                     ft.Container(
                         content=ft.Row([
@@ -87,11 +86,11 @@ def UserManagement():
                     )
                 )
                 
-                # Loop through users and add rows
+                # Add a row for each user
                 for user in users:
                     users_container.controls.append(create_user_row(user, load_users))
             else:
-                # Show message if no users found
+                # Show empty message
                 users_container.controls.append(
                     ft.Container(
                         content=ft.Text("No users found", size=16, color="outline"),
@@ -100,15 +99,18 @@ def UserManagement():
                     )
                 )
             
-            if e: e.page.update()
+            # Only update the page if this was triggered by an event (like clicking search)
+            # If e is None (initial load), we don't need to update because the page is still building.
+            if e: 
+                e.page.update()
             
         except Exception as ex:
             print(f"Error loading users: {ex}")
     
-    # Helper to create a single row for a user
+    # Function to create a single user row
     def create_user_row(user, refresh_callback):
         
-        # Function to delete a user
+        # Delete logic
         def delete_user(e):
             def confirm_delete(dialog_e):
                 try:
@@ -126,7 +128,6 @@ def UserManagement():
                 except Exception as ex:
                     print(f"Delete error: {ex}")
             
-            # Popup dialog to confirm
             dialog = ft.AlertDialog(
                 modal=True,
                 title=ft.Text("Confirm Delete"),
@@ -139,10 +140,9 @@ def UserManagement():
             )
             e.page.open(dialog)
         
-        # Function to edit a user
+        # Edit logic
         def edit_user(e):
-            # Create text fields pre-filled with data
-            # Added border_color="primary" to all for Dark Mode fix
+            # Create input fields
             username_field = ft.TextField(label="Username", value=user['username'], disabled=True, border_color="primary")
             fullname_field = ft.TextField(label="Full Name", value=user['full_name'] or "", border_color="primary")
             lastname_field = ft.TextField(label="Last Name", value=user['last_name'] or "", border_color="primary")
@@ -170,13 +170,12 @@ def UserManagement():
                 border_color="primary"
             )
             
-            # Save function inside the edit dialog
             def save_changes(dialog_e):
                 try:
                     conn = get_db_connection()
                     cursor = conn.cursor()
                     
-                    # If password field has text, update password too
+                    # Update query depending on if password was changed
                     if password_field.value:
                         cursor.execute("""
                             UPDATE users 
@@ -203,7 +202,6 @@ def UserManagement():
                 except Exception as ex:
                     print(f"Save error: {ex}")
 
-            # The actual edit popup
             edit_dialog = ft.AlertDialog(
                 modal=True,
                 title=ft.Text(f"Edit User: {user['username']}"),
@@ -229,7 +227,7 @@ def UserManagement():
             
             e.page.open(edit_dialog)
         
-        # Return the row UI
+        # User Row UI
         return ft.Container(
             content=ft.Row([
                 ft.Text(user['username'], size=13, expand=1),
@@ -260,13 +258,11 @@ def UserManagement():
             padding=15,
             border=ft.border.all(1, "outlineVariant"),
             border_radius=8,
-            bgcolor="surface", # Dark mode fix
+            bgcolor="surface",
         )
     
-    # Function to add a new user
+    # Add User Logic
     def add_user(e):
-        # Create fields for new user
-        # Added border_color="primary" for visibility
         username_field = ft.TextField(label="Username *", hint_text="Unique username", border_color="primary")
         password_field = ft.TextField(label="Password *", password=True, can_reveal_password=True, border_color="primary")
         fullname_field = ft.TextField(label="Full Name", hint_text="First name", border_color="primary")
@@ -290,7 +286,6 @@ def UserManagement():
         
         def save_new_user(dialog_e):
             try:
-                # Check required fields
                 if not username_field.value or not password_field.value:
                     dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text("Username and password required!"), bgcolor="error")
                     dialog_e.page.snack_bar.open = True
@@ -300,7 +295,7 @@ def UserManagement():
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 
-                # Check for duplicates
+                # Check duplicate username
                 cursor.execute("SELECT id FROM users WHERE username = ?", (username_field.value,))
                 if cursor.fetchone():
                     conn.close()
@@ -309,7 +304,7 @@ def UserManagement():
                     dialog_e.page.update()
                     return
                 
-                # Insert new user
+                # Insert
                 cursor.execute("""
                     INSERT INTO users (username, password, role, full_name, last_name, email, phone, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -328,7 +323,6 @@ def UserManagement():
             except Exception as ex:
                 print(f"Save new user error: {ex}")
         
-        # The Add User popup
         add_dialog = ft.AlertDialog(
             modal=True,
             title=ft.Text("Add New User"),
@@ -354,11 +348,11 @@ def UserManagement():
         
         e.page.open(add_dialog)
     
-    # Trick to load users when the page starts
-    class Fake: page=None
-    load_users(type('E',(),{'page':Fake})())
+    # Load users immediately when the component is created
+    # Passing None prevents the "Fake object has no update" error
+    load_users(None)
     
-    # --- PAGE LAYOUT ---
+    # --- MAIN LAYOUT ---
     return ft.Column([
         ft.Row([
             ft.Text("User Management", size=28, weight="bold"),
@@ -367,21 +361,20 @@ def UserManagement():
         
         ft.Container(height=20),
         
-        # Filter buttons row
         ft.Row([
             search_field,
             role_filter,
             ft.ElevatedButton(
                 "Search",
                 icon=ft.Icons.SEARCH,
-                bgcolor="primary", # Added color
+                bgcolor="primary",
                 color="white",
                 on_click=load_users,
             ),
             ft.ElevatedButton(
                 "Add User",
                 icon=ft.Icons.ADD,
-                bgcolor="secondary", # Added color
+                bgcolor="secondary",
                 color="white",
                 on_click=add_user,
             ),
@@ -389,6 +382,5 @@ def UserManagement():
         
         ft.Container(height=20),
         
-        # The list of users
         users_container,
     ], scroll=ft.ScrollMode.AUTO, spacing=0)
