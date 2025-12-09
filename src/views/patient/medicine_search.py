@@ -6,7 +6,7 @@ from services.database import get_db_connection
 
 def MedicineSearch():
     """Medicine search and browse view with cart integration."""
-    
+    #
     # Get current logged-in user
     user = AppState.get_user()
     if not user:
