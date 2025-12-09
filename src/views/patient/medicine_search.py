@@ -6,21 +6,23 @@ from services.database import get_db_connection
 
 def MedicineSearch():
     """Medicine search and browse view with cart integration."""
-    #
-    # Get current logged-in user
+    
+    # checking if the user is actually logged in
     user = AppState.get_user()
     if not user:
         return ft.Text("Please log in first", color="error")
     
     user_id = user['id']
     
+    # search bar for finding meds
     search_field = ft.TextField(
         hint_text="Search medicines by name...",
         prefix_icon=ft.Icons.SEARCH,
-        border_color="primary",
+        border_color="primary", # need this so it shows up in dark mode
         expand=True,
     )
     
+    # dropdown to filter by category
     category_dropdown = ft.Dropdown(
         label="Category",
         options=[
@@ -40,12 +42,14 @@ def MedicineSearch():
         ],
         value="All",
         width=200,
+        border_color="primary", # dark mode fix
     )
     
+    # container that holds all the results
     results_container = ft.Column(spacing=10)
     
+    # helper for showing toast messages
     def show_snackbar(e, message, error=False):
-        """Show snackbar notification."""
         e.page.snack_bar = ft.SnackBar(
             content=ft.Text(message),
             bgcolor="error" if error else "primary",
@@ -53,13 +57,13 @@ def MedicineSearch():
         e.page.snack_bar.open = True
         e.page.update()
     
+    # logic to push items to the cart database
     def add_to_cart(medicine_id, medicine_name, e):
-        """Add medicine to cart."""
         conn = get_db_connection()
         cursor = conn.cursor()
         
         try:
-            # Check if cart table exists
+            # creating table just in case it doesn't exist yet
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS cart (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +76,7 @@ def MedicineSearch():
                 )
             """)
             
-            # Check if item already in cart
+            # check if we already have this item in the cart
             cursor.execute("""
                 SELECT id, quantity FROM cart 
                 WHERE patient_id = ? AND medicine_id = ?
@@ -81,7 +85,7 @@ def MedicineSearch():
             existing = cursor.fetchone()
             
             if existing:
-                # Update quantity
+                # if yes, just bump up the quantity
                 cursor.execute("""
                     UPDATE cart 
                     SET quantity = quantity + 1 
@@ -89,7 +93,7 @@ def MedicineSearch():
                 """, (existing[0],))
                 show_snackbar(e, f"Updated {medicine_name} quantity in cart")
             else:
-                # Add new item
+                # if no, insert a new row
                 cursor.execute("""
                     INSERT INTO cart (patient_id, medicine_id, quantity)
                     VALUES (?, ?, 1)
@@ -97,7 +101,8 @@ def MedicineSearch():
                 show_snackbar(e, f"Added {medicine_name} to cart")
             
             conn.commit()
-            # notify other parts of the app that the cart changed
+            
+            # notify the rest of the app that cart changed (updates sidebar)
             try:
                 AppState.emit('cart_changed')
             except Exception:
@@ -108,8 +113,9 @@ def MedicineSearch():
         finally:
             conn.close()
     
+    # this function used to show the details dialog
+    # keeping it here in case we need it back later, but it's not used in the button anymore
     def view_medicine_details(med, e):
-        """Show medicine details dialog."""
         dialog = ft.AlertDialog(
             title=ft.Text(med['name']),
             content=ft.Column([
@@ -154,16 +160,16 @@ def MedicineSearch():
         dialog.open = True
         e.page.update()
     
+    # closes the dialog
     def close_dialog(e):
-        """Close the dialog."""
         e.page.dialog.open = False
         e.page.update()
     
+    # creates the UI card for each medicine
     def create_medicine_card(med):
-        """Create medicine card widget."""
         return ft.Container(
             content=ft.Row([
-                # Medicine image placeholder
+                # medicine icon box
                 ft.Container(
                     width=80,
                     height=80,
@@ -172,12 +178,13 @@ def MedicineSearch():
                     content=ft.Icon(ft.Icons.MEDICATION, size=40, color="outline"),
                     alignment=ft.alignment.center,
                 ),
-                # Medicine details
+                # medicine info
                 ft.Column([
                 ft.Text(med['name'], size=18, weight="bold"),
                 ft.Text(f"Category: {med['category']}", size=13, color="outline"),
                 ft.Row([
                     ft.Text(f"₱ {med['price']:.2f}", size=16, weight="bold", color="primary"),
+                    # stock status badge
                     ft.Container(
                         content=ft.Text(
                             f"Stock: {med['stock']}" if med['stock'] > 0 else "Out of Stock",
@@ -186,15 +193,17 @@ def MedicineSearch():
                             color="onErrorContainer" if med['stock'] <= 0 else "onPrimaryContainer",
                         ),
                         bgcolor="errorContainer" if med['stock'] <= 0 else "primaryContainer",
-                        border=ft.border.all("primary"),  # Add this line
+                        border=ft.border.all(1, "primary"),
                         padding=ft.padding.symmetric(horizontal=8, vertical=4),
                         border_radius=5,
                     ),
                 ], spacing=10),
                 ft.Text(f"Expires: {med['expiry_date']}", size=11, color="outline", italic=True),
             ], spacing=5, expand=True),
-                # Action buttons
+                
+                # buttons section
                 ft.Column([
+                    # Add to Cart Button (Retained)
                     ft.IconButton(
                         icon=ft.Icons.ADD_SHOPPING_CART,
                         icon_color="onPrimary",
@@ -203,6 +212,7 @@ def MedicineSearch():
                         tooltip="Add to Cart",
                         on_click=lambda e, m_id=med['id'], m_name=med['name']: add_to_cart(m_id, m_name, e)
                     ),
+                    # View Details Button REMOVED as requested
                 ], spacing=5),
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=15),
             padding=20,
@@ -211,8 +221,8 @@ def MedicineSearch():
             bgcolor="surface",
         )
     
+    # grabs the list of medicines from the DB
     def load_medicines(e=None):
-        """Load medicines from database based on search/filter."""
         query = search_field.value.lower() if search_field.value else ""
         category = category_dropdown.value
         
@@ -222,10 +232,12 @@ def MedicineSearch():
         sql = "SELECT * FROM medicines WHERE 1=1"
         params = []
         
+        # apply search filter
         if query:
             sql += " AND LOWER(name) LIKE ?"
             params.append(f"%{query}%")
         
+        # apply category filter
         if category != "All":
             sql += " AND category = ?"
             params.append(category)
@@ -236,7 +248,7 @@ def MedicineSearch():
         medicines = cursor.fetchall()
         conn.close()
         
-        # Convert to dict for easier access
+        # converting DB rows to dictionary so it's easier to use
         medicine_dicts = []
         for med in medicines:
             medicine_dicts.append({
@@ -255,6 +267,7 @@ def MedicineSearch():
             for med in medicine_dicts:
                 results_container.controls.append(create_medicine_card(med))
         else:
+            # empty state
             results_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -270,18 +283,19 @@ def MedicineSearch():
         if e:
             e.page.update()
     
-    # Initial load
+    # Hack to load data on first start
     class FakePage:
         def update(self): pass
     load_medicines(type('Event', (), {'page': FakePage()})())
     
+    # Main layout structure
     return ft.Column([
         ft.Text("Search Medicines", size=28, weight="bold"),
         ft.Text("Browse our available medicines and add them to your cart", size=14, color="outline"),
         
         ft.Container(height=20),
         
-        # Search bar
+        # Search bar row
         ft.Row([
             search_field,
             category_dropdown,
@@ -299,6 +313,6 @@ def MedicineSearch():
         ft.Divider(),
         ft.Container(height=10),
         
-        # Results
+        # Results list
         results_container,
     ], scroll=ft.ScrollMode.AUTO, spacing=0)
