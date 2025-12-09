@@ -7,18 +7,15 @@ from datetime import datetime
 def UserManagement():
     """User management interface with full CRUD operations."""
     
-    # This column holds the list of user cards
     users_container = ft.Column(spacing=10)
     
-    # Search box
     search_field = ft.TextField(
         hint_text="Search users...",
         prefix_icon=ft.Icons.SEARCH,
-        border_color="primary", # Visible in dark mode
+        border_color="primary", 
         width=300,
     )
    
-    # Filter by role
     role_filter = ft.Dropdown(
         label="Filter by Role",
         options=[
@@ -35,42 +32,46 @@ def UserManagement():
         border_color="primary", 
     )
     
-    # Function to load users from the database
     def load_users(e=None):
         try:
-            # Get filter values
             query = search_field.value.lower() if search_field.value else ""
             role = role_filter.value
             
             conn = get_db_connection()
             cursor = conn.cursor()
             
-            # Base query
+            # --- NEW LOGIC: Count total users per role ---
+            # We need this to know if a user is the "last one standing" in their role
+            cursor.execute("SELECT role, COUNT(*) FROM users GROUP BY role")
+            counts_result = cursor.fetchall()
+            
+            # Convert list of tuples to a dictionary: {'Admin': 1, 'Pharmacist': 3}
+            # This makes it easy to look up "How many Admins are there?"
+            role_counts = {row[0]: row[1] for row in counts_result}
+            # ---------------------------------------------
+            
+            # Normal logic to fetch users for the list
             sql = "SELECT * FROM users WHERE 1=1"
             params = []
             
-            # Add search filter
             if query:
                 sql += " AND (LOWER(username) LIKE ? OR LOWER(full_name) LIKE ?)"
                 params.extend([f"%{query}%", f"%{query}%"])
             
-            # Add role filter
             if role != "All":
                 sql += " AND role = ?"
                 params.append(role)
             
-            # Sort newest first
             sql += " ORDER BY created_at DESC"
             
             cursor.execute(sql, params)
             users = cursor.fetchall()
             conn.close()
             
-            # Clear the list so we don't add duplicates
             users_container.controls.clear()
             
             if users:
-                # Add the header row
+                # Table Header
                 users_container.controls.append(
                     ft.Container(
                         content=ft.Row([
@@ -86,11 +87,20 @@ def UserManagement():
                     )
                 )
                 
-                # Add a row for each user
+                # Create rows
                 for user in users:
-                    users_container.controls.append(create_user_row(user, load_users))
+                    # check how many people have this user's role
+                    user_role = user['role']
+                    total_in_role = role_counts.get(user_role, 0)
+                    
+                    # If count is 1 (or somehow less), they are the last one.
+                    # We pass 'True' if they are the last one.
+                    is_last_user = (total_in_role <= 1)
+                    
+                    users_container.controls.append(
+                        create_user_row(user, load_users, is_last_user)
+                    )
             else:
-                # Show empty message
                 users_container.controls.append(
                     ft.Container(
                         content=ft.Text("No users found", size=16, color="outline"),
@@ -99,18 +109,16 @@ def UserManagement():
                     )
                 )
             
-            # Only update the page if this was triggered by an event (like clicking search)
-            # If e is None (initial load), we don't need to update because the page is still building.
             if e: 
                 e.page.update()
             
         except Exception as ex:
             print(f"Error loading users: {ex}")
     
-    # Function to create a single user row
-    def create_user_row(user, refresh_callback):
+    # Helper to create a row. 
+    # Added 'is_delete_disabled' parameter
+    def create_user_row(user, refresh_callback, is_delete_disabled):
         
-        # Delete logic
         def delete_user(e):
             def confirm_delete(dialog_e):
                 try:
@@ -140,9 +148,7 @@ def UserManagement():
             )
             e.page.open(dialog)
         
-        # Edit logic
         def edit_user(e):
-            # Create input fields
             username_field = ft.TextField(label="Username", value=user['username'], disabled=True, border_color="primary")
             fullname_field = ft.TextField(label="Full Name", value=user['full_name'] or "", border_color="primary")
             lastname_field = ft.TextField(label="Last Name", value=user['last_name'] or "", border_color="primary")
@@ -175,7 +181,6 @@ def UserManagement():
                     conn = get_db_connection()
                     cursor = conn.cursor()
                     
-                    # Update query depending on if password was changed
                     if password_field.value:
                         cursor.execute("""
                             UPDATE users 
@@ -227,7 +232,6 @@ def UserManagement():
             
             e.page.open(edit_dialog)
         
-        # User Row UI
         return ft.Container(
             content=ft.Row([
                 ft.Text(user['username'], size=13, expand=1),
@@ -247,10 +251,15 @@ def UserManagement():
                         tooltip="Edit User",
                         on_click=edit_user,
                     ),
+                    # The Delete Button
                     ft.IconButton(
                         icon=ft.Icons.DELETE,
-                        icon_color="error",
-                        tooltip="Delete User",
+                        # If disabled, turn it grey, else red
+                        icon_color="grey" if is_delete_disabled else "error",
+                        # Disable the click if they are the last user
+                        disabled=is_delete_disabled,
+                        # Show a helpful hint if they can't delete
+                        tooltip="Cannot delete the last user of this role" if is_delete_disabled else "Delete User",
                         on_click=delete_user,
                     ),
                 ], spacing=5, expand=1),
@@ -261,7 +270,6 @@ def UserManagement():
             bgcolor="surface",
         )
     
-    # Add User Logic
     def add_user(e):
         username_field = ft.TextField(label="Username *", hint_text="Unique username", border_color="primary")
         password_field = ft.TextField(label="Password *", password=True, can_reveal_password=True, border_color="primary")
@@ -295,7 +303,6 @@ def UserManagement():
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 
-                # Check duplicate username
                 cursor.execute("SELECT id FROM users WHERE username = ?", (username_field.value,))
                 if cursor.fetchone():
                     conn.close()
@@ -304,7 +311,6 @@ def UserManagement():
                     dialog_e.page.update()
                     return
                 
-                # Insert
                 cursor.execute("""
                     INSERT INTO users (username, password, role, full_name, last_name, email, phone, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -319,7 +325,7 @@ def UserManagement():
                 dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text(f"User '{username_field.value}' created!"), bgcolor="primary")
                 dialog_e.page.snack_bar.open = True
                 dialog_e.page.update()
-                load_users(dialog_e) # Refresh list
+                load_users(dialog_e) 
             except Exception as ex:
                 print(f"Save new user error: {ex}")
         
@@ -348,11 +354,8 @@ def UserManagement():
         
         e.page.open(add_dialog)
     
-    # Load users immediately when the component is created
-    # Passing None prevents the "Fake object has no update" error
     load_users(None)
     
-    # --- MAIN LAYOUT ---
     return ft.Column([
         ft.Row([
             ft.Text("User Management", size=28, weight="bold"),
