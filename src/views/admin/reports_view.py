@@ -7,9 +7,10 @@ from datetime import datetime, timedelta
 def ReportsView():
     """Reports interface with real database statistics."""
     
+    # This column holds the generated report content
     report_output = ft.Column(spacing=10)
     
-    # Report type selector
+    # Dropdown to choose report type
     report_type = ft.Dropdown(
         label="Report Type",
         options=[
@@ -22,14 +23,16 @@ def ReportsView():
         ],
         value="user_activity",
         width=300,
+        border_color="primary", # Dark mode fix
     )
     
-    # Date range
+    # Date pickers
     date_from = ft.TextField(
         label="From Date",
         hint_text="YYYY-MM-DD",
         value=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
         width=200,
+        border_color="primary", # Dark mode fix
     )
     
     date_to = ft.TextField(
@@ -37,7 +40,25 @@ def ReportsView():
         hint_text="YYYY-MM-DD",
         value=datetime.now().strftime("%Y-%m-%d"),
         width=200,
+        border_color="primary", # Dark mode fix
     )
+    
+    # Helper to make summary cards
+    def create_summary_card(title, value, icon, color):
+        return ft.Container(
+            content=ft.Column([
+                ft.Icon(icon, color=color, size=30),
+                ft.Text(str(value), size=24, weight="bold", color=color),
+                ft.Text(title, size=12, color="outline"),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
+            padding=20,
+            bgcolor="surface", # Adapts to theme
+            border_radius=10,
+            border=ft.border.all(1, "outlineVariant"),
+            expand=True,
+        )
+
+    # --- REPORT GENERATION FUNCTIONS ---
     
     def generate_user_activity_report():
         """Generate user activity report from real data."""
@@ -129,7 +150,7 @@ def ReportsView():
                 )
         
         return controls
-    
+
     def generate_inventory_report():
         """Generate inventory status report from real data."""
         conn = get_db_connection()
@@ -244,7 +265,7 @@ def ReportsView():
                 )
         
         return controls
-    
+
     def generate_prescription_report():
         """Generate prescription summary report from real data."""
         conn = get_db_connection()
@@ -339,7 +360,7 @@ def ReportsView():
                 )
         
         return controls
-    
+
     def generate_low_stock_report():
         """Generate low stock alert report from real data."""
         conn = get_db_connection()
@@ -477,7 +498,7 @@ def ReportsView():
             )
         
         return controls
-    
+
     def generate_system_usage_report():
         """Generate system usage statistics from real data."""
         conn = get_db_connection()
@@ -551,7 +572,7 @@ def ReportsView():
             )
         
         return controls
-    
+
     def generate_orders_summary():
         """Generate orders summary report from real data."""
         conn = get_db_connection()
@@ -632,25 +653,11 @@ def ReportsView():
         
         return controls
     
-    def create_summary_card(title, value, icon, color):
-        """Helper to create summary cards."""
-        return ft.Container(
-            content=ft.Column([
-                ft.Icon(icon, color=color, size=30),
-                ft.Text(str(value), size=24, weight="bold", color=color),
-                ft.Text(title, size=12, color="outline"),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
-            padding=20,
-            bgcolor="surface",
-            border_radius=10,
-            border=ft.border.all(1, "outlineVariant"),
-            expand=True,
-        )
-    
     def generate_report(e):
-        """Generate selected report."""
+        """Pick the right report function and run it."""
         report_output.controls.clear()
         
+        # Dictionary mapping values to functions
         report_generators = {
             "user_activity": generate_user_activity_report,
             "inventory_status": generate_inventory_report,
@@ -666,15 +673,7 @@ def ReportsView():
         
         e.page.update()
     
-    def export_report(e):
-        """Export report to file (placeholder)."""
-        e.page.snack_bar = ft.SnackBar(
-            content=ft.Text("Export feature coming soon!"),
-            bgcolor="secondary",
-        )
-        e.page.snack_bar.open = True
-        e.page.update()
-    
+    # --- PAGE LAYOUT ---
     return ft.Column([
         ft.Row([
             ft.Text("System Reports", size=28, weight="bold"),
@@ -700,13 +699,7 @@ def ReportsView():
                         color="onPrimary",
                         on_click=generate_report,
                     ),
-                    ft.ElevatedButton(
-                        "Export to PDF",
-                        icon=ft.Icons.DOWNLOAD,
-                        bgcolor="secondary",
-                        color="onSecondary",
-                        on_click=export_report,
-                    ),
+                    # REMOVED EXPORT BUTTON AS REQUESTED
                 ], spacing=10),
             ], spacing=15),
             padding=20,
