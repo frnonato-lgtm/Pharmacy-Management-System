@@ -266,7 +266,7 @@ def MedicineSearch():
                     alignment=ft.alignment.center,
                 )
             )
-        
+        #
         if e:
             e.page.update()
     

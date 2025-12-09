@@ -7,7 +7,7 @@ from datetime import datetime
 
 def PatientPrescriptionsView():
     """View patient's own prescriptions and submit new ones."""
-    
+    #
     # 1. Get the current user
     user = AppState.get_user()
     

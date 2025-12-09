@@ -4,7 +4,7 @@ import flet as ft
 from state.app_state import AppState
 from services.database import get_db_connection
 from datetime import datetime
-
+#
 def PatientInvoicesView():
     """View patient's own invoices and bills."""
     

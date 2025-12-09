@@ -8,7 +8,7 @@ class AppLayout(ft.Row):
         self.page = page
         self.expand = True 
         self.spacing = 0
-
+#
         # Dark mode toggle button logic
         def toggle_theme(e):
             if self.page.theme_mode == ft.ThemeMode.LIGHT:
@@ -74,9 +74,10 @@ class AppLayout(ft.Row):
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.SEARCH, label="Search Meds"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.SHOPPING_CART, label="My Cart"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.RECEIPT_LONG, label="My Orders"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.RECEIPT_LONG, label="My Bills")) 
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile")) 
             #dests.append(ft.NavigationRailDestination(icon=ft.Icons.MEDICAL_SERVICES, label="Prescriptions"))  
-            dests.append(ft.NavigationRailDestination(icon=ft.Icons.RECEIPT_LONG, label="My Bills")) 
+            
             
             
         elif role == "Pharmacist":
@@ -112,6 +113,7 @@ class AppLayout(ft.Row):
         elif label == "Search Meds": self.page.go("/patient/search")
         elif label == "My Cart": self.page.go("/patient/cart")
         elif label == "My Orders": self.page.go("/patient/orders")
+        elif label == "My Bills": self.page.go("/patient/invoices")
         elif label == "My Profile": self.page.go("/patient/profile")
         # Staff links
         elif label == "Prescriptions": self.page.go("/pharmacist/prescriptions")
