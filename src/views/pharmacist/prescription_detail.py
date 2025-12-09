@@ -103,13 +103,15 @@ def PrescriptionDetailView(prescription_id):
             line = line.strip()
             if line.startswith('Doctor:') and not rx['doctor_name']:
                 rx['doctor_name'] = line.replace('Doctor:', '').strip()
-            elif line.startswith('Medicine:') and not rx['medicine_name']:
+            elif line.startswith('Medicine:') and rx['medicine_name'] == 'Not specified':
                 rx['medicine_name'] = line.replace('Medicine:', '').strip()
             elif line.startswith('Dosage:') and not rx['dosage']:
                 rx['dosage'] = line.replace('Dosage:', '').strip()
+            elif line.startswith('Frequency:') and not rx['frequency']:
+                rx['frequency'] = line.replace('Frequency:', '').strip()
             elif line.startswith('Duration:') and not rx['duration']:
                 duration_str = line.replace('Duration:', '').strip()
-                # Extract number from "3 days", "1 week", etc
+                # Extract number from "3 days", "5 days", etc
                 import re
                 match = re.search(r'(\d+)', duration_str)
                 if match:

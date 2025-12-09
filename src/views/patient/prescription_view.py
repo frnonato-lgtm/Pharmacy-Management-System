@@ -1,4 +1,4 @@
-"""Patient prescriptions view with submission form."""
+"""Patient prescriptions view with enhanced submission form."""
 
 import flet as ft
 from state.app_state import AppState
@@ -66,22 +66,23 @@ def PatientPrescriptionsView():
         print("Submit button clicked!") 
         
         # Define a consistent style for all inputs
-        # I removed the hint_text here like you asked
-        def create_input(label, multiline=False):
+        def create_input(label, multiline=False, keyboard_type=None):
             return ft.TextField(
                 label=label,
                 multiline=multiline,
-                width=None, # Allow it to fill the container
+                width=None,
                 expand=True,
                 border_color="outline",
-                text_size=14
+                text_size=14,
+                keyboard_type=keyboard_type if keyboard_type else None,
             )
 
-        # Create the inputs
+        # Create the inputs with ALL necessary fields
         doctor_name = create_input("Doctor's Name *")
         medicine_name = create_input("Medicine Prescribed *")
-        dosage = create_input("Dosage Instructions *", multiline=True)
-        duration = create_input("Duration *")
+        dosage = create_input("Dosage (e.g., 500ml, 2 tablets) *")
+        frequency = create_input("Frequency (e.g., Once daily, Twice daily) *")
+        duration = create_input("Duration (in days) *", keyboard_type=ft.KeyboardType.NUMBER)
         additional_notes = create_input("Additional Notes", multiline=True)
         
         # Error message label (hidden by default)
@@ -90,8 +91,16 @@ def PatientPrescriptionsView():
         # What happens when they click "Submit" inside the popup
         def save_prescription(dialog_e):
             # Basic validation
-            if not all([doctor_name.value, medicine_name.value, dosage.value, duration.value]):
+            if not all([doctor_name.value, medicine_name.value, dosage.value, frequency.value, duration.value]):
                 error_text.value = "Please fill in all required fields!"
+                dialog_e.control.page.update()
+                return
+            
+            # Validate duration is a number
+            try:
+                duration_days = int(duration.value)
+            except:
+                error_text.value = "Duration must be a number (in days)"
                 dialog_e.control.page.update()
                 return
             
@@ -100,13 +109,23 @@ def PatientPrescriptionsView():
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 
-                # Combine info into a notes string
-                notes_text = f"Doctor: {doctor_name.value}\nMedicine: {medicine_name.value}\nDosage: {dosage.value}\nDuration: {duration.value}\nNotes: {additional_notes.value}"
+                # Combine info into a structured notes string
+                notes_text = f"Doctor: {doctor_name.value}\nMedicine: {medicine_name.value}\nDosage: {dosage.value}\nFrequency: {frequency.value}\nDuration: {duration_days} days\nNotes: {additional_notes.value or 'None'}"
                 
+                # Insert with structured fields
                 cursor.execute("""
-                    INSERT INTO prescriptions (patient_id, status, notes, created_at)
-                    VALUES (?, 'Pending', ?, ?)
-                """, (user['id'], notes_text, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                    INSERT INTO prescriptions 
+                    (patient_id, status, notes, created_at, dosage, frequency, duration, doctor_name)
+                    VALUES (?, 'Pending', ?, ?, ?, ?, ?, ?)
+                """, (
+                    user['id'], 
+                    notes_text, 
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    dosage.value,
+                    frequency.value,
+                    duration_days,
+                    doctor_name.value
+                ))
                 
                 conn.commit()
                 conn.close()
@@ -131,18 +150,16 @@ def PatientPrescriptionsView():
                 dialog_e.control.page.update()
 
         # The actual Dialog Popup
-        # I made the width bigger (500) so it looks better
         prescription_form = ft.AlertDialog(
-            modal=True, # Forces user to click buttons to close
+            modal=True,
             title=ft.Row([
                 ft.Icon(ft.Icons.MEDICAL_SERVICES, color="primary"), 
                 ft.Text("New Prescription")
             ]),
-            # Using surfaceVariant makes it stand out slightly against the background
             bgcolor="surface", 
             shape=ft.RoundedRectangleBorder(radius=12),
             content=ft.Container(
-                width=500, # Increased width here
+                width=500,
                 padding=10,
                 content=ft.Column([
                     ft.Text("Enter details from your doctor's prescription:", size=13, color="outline"),
@@ -150,7 +167,10 @@ def PatientPrescriptionsView():
                     doctor_name,
                     medicine_name,
                     dosage,
+                    frequency,
                     duration,
+                    ft.Text("Note: Medicine stock and pricing will be determined by the pharmacist", 
+                           size=11, color="outline", italic=True),
                     additional_notes,
                     error_text,
                 ], scroll=ft.ScrollMode.AUTO, tight=True)
@@ -219,14 +239,13 @@ def PatientPrescriptionsView():
         ft.Container(height=10),
         
         # The List Logic
-        # If we have items, show them. If not, show the "Empty" placeholder.
         ft.Column([
             create_prescription_card(rx) for rx in prescriptions
         ], spacing=10) if prescriptions else ft.Container(
             content=ft.Column([
                 ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=80, color="outline"),
                 ft.Text("No prescriptions yet", size=18, color="outline"),
-                ft.Text("Click the button above to upload one!", size=14, color="outline"),
+                ft.Text("Click the button above to submit one!", size=14, color="outline"),
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
             padding=50,
             alignment=ft.alignment.center,

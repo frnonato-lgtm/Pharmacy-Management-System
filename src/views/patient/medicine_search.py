@@ -17,7 +17,7 @@ def MedicineSearch():
     search_field = ft.TextField(
         hint_text="Search medicines by name...",
         prefix_icon=ft.Icons.SEARCH,
-        border_color="outline",
+        border_color="primary",
         expand=True,
     )
     
@@ -97,6 +97,11 @@ def MedicineSearch():
                 show_snackbar(e, f"Added {medicine_name} to cart")
             
             conn.commit()
+            # notify other parts of the app that the cart changed
+            try:
+                AppState.emit('cart_changed')
+            except Exception:
+                pass
             
         except Exception as ex:
             show_snackbar(e, f"Failed to add to cart: {str(ex)}", error=True)
@@ -169,24 +174,25 @@ def MedicineSearch():
                 ),
                 # Medicine details
                 ft.Column([
-                    ft.Text(med['name'], size=18, weight="bold"),
-                    ft.Text(f"Category: {med['category']}", size=13, color="outline"),
-                    ft.Row([
-                        ft.Text(f"₱ {med['price']:.2f}", size=16, weight="bold", color="primary"),
-                        ft.Container(
-                            content=ft.Text(
-                                f"Stock: {med['stock']}" if med['stock'] > 0 else "Out of Stock",
-                                size=12,
-                                weight="bold",
-                                color="onErrorContainer" if med['stock'] <= 0 else "onPrimaryContainer",
-                            ),
-                            bgcolor="errorContainer" if med['stock'] <= 0 else "primaryContainer",
-                            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-                            border_radius=5,
+                ft.Text(med['name'], size=18, weight="bold"),
+                ft.Text(f"Category: {med['category']}", size=13, color="outline"),
+                ft.Row([
+                    ft.Text(f"₱ {med['price']:.2f}", size=16, weight="bold", color="primary"),
+                    ft.Container(
+                        content=ft.Text(
+                            f"Stock: {med['stock']}" if med['stock'] > 0 else "Out of Stock",
+                            size=12,
+                            weight="bold",
+                            color="onErrorContainer" if med['stock'] <= 0 else "onPrimaryContainer",
                         ),
-                    ], spacing=10),
-                    ft.Text(f"Expires: {med['expiry_date']}", size=11, color="outline", italic=True),
-                ], spacing=5, expand=True),
+                        bgcolor="errorContainer" if med['stock'] <= 0 else "primaryContainer",
+                        border=ft.border.all("primary"),  # Add this line
+                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                        border_radius=5,
+                    ),
+                ], spacing=10),
+                ft.Text(f"Expires: {med['expiry_date']}", size=11, color="outline", italic=True),
+            ], spacing=5, expand=True),
                 # Action buttons
                 ft.Column([
                     ft.IconButton(

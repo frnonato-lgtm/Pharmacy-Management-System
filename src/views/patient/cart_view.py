@@ -380,13 +380,15 @@ def CartView():
         ft.Container(height=20),
         ft.Divider(),
         
-        # Order summary
-        ft.Container(
-            content=summary_container,
-            padding=20,
-            bgcolor="surface",
-            border_radius=10,
-            border=ft.border.all(1, "outlineVariant"),
-            width=400,
-        ),
+        # Order summary - CENTERED
+        ft.Row([
+            ft.Container(
+                content=summary_container,
+                padding=20,
+                bgcolor="surface",
+                border_radius=10,
+                border=ft.border.all(1, "outlineVariant"),
+                width=400,
+            ),
+        ], alignment=ft.MainAxisAlignment.CENTER),
     ], scroll=ft.ScrollMode.AUTO, spacing=0)

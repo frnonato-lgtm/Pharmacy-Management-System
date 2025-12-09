@@ -3,6 +3,7 @@
 import flet as ft
 from state.app_state import AppState
 from services.database import get_db_connection
+from datetime import datetime
 
 def PatientInvoicesView():
     """View patient's own invoices and bills."""
@@ -28,6 +29,7 @@ def PatientInvoicesView():
             "Unpaid": ("error", ft.Icons.ERROR_OUTLINE),
             "Paid": ("primary", ft.Icons.CHECK_CIRCLE),
             "Cancelled": ("outline", ft.Icons.CANCEL),
+            "Partially Paid": ("tertiary", ft.Icons.PENDING),
         }
         color, icon = status_colors.get(invoice['status'], ("outline", ft.Icons.INFO))
         
@@ -106,7 +108,7 @@ def PatientInvoicesView():
                         bgcolor="primary",
                         color="onPrimary",
                         disabled=invoice['status'] != "Unpaid",
-                        on_click=lambda e: pay_invoice(e, invoice['id']),
+                        on_click=lambda e, inv_id=invoice['id']: pay_invoice(e, inv_id),
                     ) if invoice['status'] == "Unpaid" else ft.Container(),
                 ], spacing=10),
             ], spacing=10),
@@ -117,13 +119,233 @@ def PatientInvoicesView():
         )
     
     def pay_invoice(e, invoice_id):
-        """Handle invoice payment."""
-        e.page.snack_bar = ft.SnackBar(
-            content=ft.Text("Payment processing coming soon! Contact billing clerk."),
-            bgcolor="tertiary",
+        """Handle invoice payment with payment form dialog."""
+        
+        # Get invoice details first
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT invoice_number, total_amount, status
+            FROM invoices 
+            WHERE id = ?
+        """, (invoice_id,))
+        invoice_data = cursor.fetchone()
+        conn.close()
+        
+        if not invoice_data:
+            e.page.snack_bar = ft.SnackBar(
+                content=ft.Text("Invoice not found"),
+                bgcolor="error",
+            )
+            e.page.snack_bar.open = True
+            e.page.update()
+            return
+        
+        invoice_number, total_amount, status = invoice_data
+        
+        # Payment form fields
+        payment_method = ft.Dropdown(
+            label="Payment Method *",
+            options=[
+                ft.dropdown.Option("Cash"),
+                ft.dropdown.Option("Credit Card"),
+                ft.dropdown.Option("Debit Card"),
+                ft.dropdown.Option("GCash"),
+                ft.dropdown.Option("PayMaya"),
+                ft.dropdown.Option("Bank Transfer"),
+            ],
+            value="Cash",
+            border_color="outline",
         )
-        e.page.snack_bar.open = True
-        e.page.update()
+        
+        payment_amount = ft.TextField(
+            label="Payment Amount *",
+            value=f"{total_amount:.2f}",
+            keyboard_type=ft.KeyboardType.NUMBER,
+            prefix_text="₱ ",
+            border_color="outline",
+        )
+        
+        reference_number = ft.TextField(
+            label="Reference Number (Optional)",
+            hint_text="e.g., Transaction ID, Check Number",
+            border_color="outline",
+        )
+        
+        payment_notes = ft.TextField(
+            label="Payment Notes (Optional)",
+            multiline=True,
+            min_lines=2,
+            max_lines=3,
+            border_color="outline",
+        )
+        
+        error_text = ft.Text("", color="error", size=12)
+        
+        def submit_payment(dialog_e):
+            """Process the payment submission."""
+            # Validation
+            if not payment_method.value:
+                error_text.value = "Please select a payment method"
+                dialog_e.page.update()
+                return
+            
+            try:
+                amount = float(payment_amount.value)
+                if amount <= 0:
+                    error_text.value = "Amount must be greater than 0"
+                    dialog_e.page.update()
+                    return
+                
+                if amount > total_amount:
+                    error_text.value = f"Amount cannot exceed invoice total (₱{total_amount:.2f})"
+                    dialog_e.page.update()
+                    return
+            except ValueError:
+                error_text.value = "Please enter a valid amount"
+                dialog_e.page.update()
+                return
+            
+            # Determine new status
+            if amount >= total_amount:
+                new_status = "Paid"
+            else:
+                new_status = "Partially Paid"
+            
+            # Build payment notes
+            notes_parts = []
+            if reference_number.value:
+                notes_parts.append(f"Ref: {reference_number.value}")
+            if payment_notes.value:
+                notes_parts.append(payment_notes.value)
+            combined_notes = " | ".join(notes_parts) if notes_parts else None
+            
+            # Update database
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            try:
+                cursor.execute("""
+                    UPDATE invoices 
+                    SET status = ?,
+                        payment_method = ?,
+                        payment_date = ?,
+                        notes = ?
+                    WHERE id = ?
+                """, (
+                    new_status,
+                    payment_method.value,
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    combined_notes,
+                    invoice_id
+                ))
+                
+                # Log the payment in activity log
+                cursor.execute("""
+                    INSERT INTO activity_log (user_id, action, details, timestamp)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    user['id'],
+                    'payment_submitted',
+                    f"Payment of ₱{amount:.2f} for invoice {invoice_number} via {payment_method.value}",
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                ))
+                
+                conn.commit()
+                conn.close()
+                
+                # Close dialog
+                dialog_e.page.close(payment_dialog)
+                
+                # Show success message
+                dialog_e.page.snack_bar = ft.SnackBar(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.CHECK_CIRCLE, color="white"),
+                        ft.Text(f"Payment of ₱{amount:.2f} recorded successfully!", color="white"),
+                    ]),
+                    bgcolor="primary",
+                    duration=3000,
+                )
+                dialog_e.page.snack_bar.open = True
+                
+                # Refresh the invoices page
+                dialog_e.page.go("/patient/invoices")
+                
+            except Exception as ex:
+                conn.rollback()
+                conn.close()
+                
+                error_text.value = f"Payment failed: {str(ex)}"
+                dialog_e.page.update()
+        
+        def close_dialog(dialog_e):
+            dialog_e.page.close(payment_dialog)
+        
+        # Create payment dialog
+        payment_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.PAYMENT, color="primary"),
+                ft.Text("Make Payment"),
+            ]),
+            content=ft.Container(
+                width=450,
+                content=ft.Column([
+                    # Invoice info
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Text("Invoice:", size=13, color="outline", width=100),
+                                ft.Text(invoice_number, size=13, weight="bold"),
+                            ]),
+                            ft.Row([
+                                ft.Text("Total Due:", size=13, color="outline", width=100),
+                                ft.Text(f"₱{total_amount:.2f}", size=16, weight="bold", color="primary"),
+                            ]),
+                        ], spacing=5),
+                        padding=15,
+                        bgcolor=ft.Colors.with_opacity(0.05, "primary"),
+                        border_radius=8,
+                        border=ft.border.all(1, "primary"),
+                    ),
+                    
+                    ft.Divider(height=20),
+                    
+                    # Payment form
+                    payment_method,
+                    payment_amount,
+                    reference_number,
+                    payment_notes,
+                    
+                    error_text,
+                    
+                    ft.Container(
+                        content=ft.Text(
+                            "Note: Payment will be recorded immediately. Please ensure all details are correct.",
+                            size=11,
+                            color="outline",
+                            italic=True,
+                        ),
+                        padding=10,
+                        bgcolor=ft.Colors.with_opacity(0.05, "tertiary"),
+                        border_radius=5,
+                    ),
+                ], spacing=10, scroll=ft.ScrollMode.AUTO, tight=True),
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=close_dialog),
+                ft.ElevatedButton(
+                    "Submit Payment",
+                    icon=ft.Icons.CHECK,
+                    bgcolor="primary",
+                    color="white",
+                    on_click=submit_payment,
+                ),
+            ],
+            actions_padding=20,
+        )
+        
+        e.page.open(payment_dialog)
     
     # Calculate totals
     total_unpaid = sum(inv['total_amount'] for inv in invoices if inv['status'] == 'Unpaid')
@@ -202,7 +424,7 @@ def PatientInvoicesView():
             content=ft.Row([
                 ft.Icon(ft.Icons.INFO_OUTLINE, color="tertiary", size=20),
                 ft.Text(
-                    "Invoices are automatically generated when you place orders. Pay unpaid bills at the billing counter or contact the billing clerk.",
+                    "Invoices are automatically generated when you place orders. Pay unpaid bills using the payment form or contact the billing clerk.",
                     size=13,
                     expand=True,
                 ),

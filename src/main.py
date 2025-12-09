@@ -74,7 +74,7 @@ def main(page: ft.Page):
         if troute == "/":
             page.views.append(create_view("/", [LandingPage(page)], ft.ScrollMode.AUTO))
         
-        # Login
+        # Logins
         elif troute.startswith("/login"):
             try: role_param = troute.split("/")[2]
             except: role_param = "Patient"
