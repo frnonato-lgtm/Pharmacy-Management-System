@@ -113,9 +113,9 @@ def HelpDeskView():
                 # 3. Contact Support Section
                 ft.Text("Need More Help?", size=20, weight="bold"),
                 ft.Row([
-                    create_contact_card("System Admin", "admin@pharmacy.com",),
-                    create_contact_card("Head Pharmacist", "pharm@pharmacy.com"),
-                    create_contact_card("Staff Support", "support@pharmacy.com"),
+                    create_contact_card("System Admin", "admin@pharmacy.com","ext"),
+                    create_contact_card("Head Pharmacist", "pharm@pharmacy.com","ext"),
+                    create_contact_card("Staff Support", "support@pharmacy.com","ext"),
                 ]),
                 
                 ft.Container(height=20),
