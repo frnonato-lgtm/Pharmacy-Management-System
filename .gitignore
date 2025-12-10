@@ -7,3 +7,9 @@ pharmacy.db
 
 # Virtual Environment
 .venv/
+
+# Deployment Stuff
+build/
+dist/
+.ico
+.spec
