@@ -186,8 +186,8 @@ def StaffDashboard():
                         ]),
                         expand=1, # Takes up 1/3 of the width
                     )
-                ], spacing=20, vertical_alignment=ft.CrossAxisAlignment.START)
+                ], spacing=20, vertical_alignment=ft.CrossAxisAlignment.START, expand=True)
                 
             ])
         )
-    ], scroll=ft.ScrollMode.AUTO, spacing=0)
+    ], scroll=ft.ScrollMode.AUTO, spacing=0, expand=True)

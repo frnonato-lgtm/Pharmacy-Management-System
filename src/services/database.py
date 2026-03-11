@@ -1,35 +1,24 @@
 import sqlite3
 import os
-import sys
 
-# --- PATH CONFIGURATION (Deployment Safe) ---
-# This logic ensures the app finds the database whether running as code or .exe
-if getattr(sys, 'frozen', False):
-    # Running as compiled .exe (PyInstaller)
-    # In this mode, the executable is the anchor point
-    BASE_DIR = os.path.dirname(sys.executable)
-else:
-    # Running as Python script
-    # In this mode, this file (database.py) is the anchor point
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+# Figure out where this file is, so we can put the DB in the same folder
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, 'storage')
-DB_FILE = os.path.join(DB_PATH, "pharmacy.db")
 
 # Make sure the storage folder exists
 if not os.path.exists(DB_PATH):
     os.makedirs(DB_PATH)
 
-# --- DATABASE CONNECTION ---
+DB_FILE = os.path.join(DB_PATH, "pharmacy.db")
+
+# Helper to connect to the database
 def get_db_connection():
-    """Create a connection to the SQLite database."""
     conn = sqlite3.connect(DB_FILE, check_same_thread=False)
     conn.row_factory = sqlite3.Row # This lets us use column names like row['name']
     return conn
 
-# --- INITIALIZATION LOGIC ---
+# Setup the tables if they don't exist
 def init_db():
-    """Create tables if they don't exist."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -107,6 +96,7 @@ def init_db():
     ''')
 
     # Create default users (Admin, Staff, etc.) if they don't exist
+    # We NEED these to log in, but we removed the medicines list.
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cursor.fetchone():
         print("Adding default test users...")
@@ -126,9 +116,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-# --- AUTHENTICATION ---
+# Check login credentials
 def authenticate_user(username, password):
-    """Check login credentials."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))

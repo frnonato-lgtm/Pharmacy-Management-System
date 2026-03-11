@@ -306,7 +306,7 @@ def PatientDashboard():
                 ft.Icons.CHECK_CIRCLE, 
                 "primary"
             ),
-        ], spacing=15),
+        ], spacing=15, expand=True),
         
         ft.Container(height=20),
         
@@ -339,6 +339,7 @@ def PatientDashboard():
             bgcolor="surface",
             border_radius=10,
             border=ft.border.all(1, "outlineVariant"),
+            expand=False,
         ),
         
         ft.Container(height=20),
@@ -356,13 +357,14 @@ def PatientDashboard():
                         ),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Divider(),
-                    *order_widgets,
-                ], spacing=10),
+                    ft.Column(order_widgets, spacing=10, expand=True),
+                ], spacing=10, expand=True),
                 padding=20,
                 bgcolor="surface",
                 border_radius=10,
                 border=ft.border.all(1, "outlineVariant"),
-                expand=2,
+                expand=1,
+                height=300,
             ),
             
             # Notifications
@@ -370,13 +372,14 @@ def PatientDashboard():
                 content=ft.Column([
                     ft.Text("Notifications", size=20, weight="bold"),
                     ft.Divider(),
-                    *notification_widgets,
-                ], spacing=10),
+                    ft.Column(notification_widgets, spacing=10, expand=True),
+                ], spacing=10, expand=True),
                 padding=20,
                 bgcolor="surface",
                 border_radius=10,
                 border=ft.border.all(1, "outlineVariant"),
                 expand=1,
+                height=300,
             ),
-        ], spacing=15),
-    ], scroll=ft.ScrollMode.AUTO, spacing=0)
+        ], spacing=15, expand=True),
+    ], scroll=ft.ScrollMode.AUTO, spacing=0, expand=True)

@@ -411,5 +411,5 @@ def PharmacistDashboard():
                 border=ft.border.all(1, "outlineVariant"),
                 expand=1,
             ),
-        ], spacing=15, vertical_alignment=ft.CrossAxisAlignment.START),
-    ], scroll=ft.ScrollMode.AUTO, spacing=0)
+        ], spacing=15, vertical_alignment=ft.CrossAxisAlignment.START, expand=True),
+    ], scroll=ft.ScrollMode.AUTO, spacing=0, expand=True)

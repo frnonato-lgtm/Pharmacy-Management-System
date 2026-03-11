@@ -71,6 +71,14 @@ def CartView():
         conn.commit()
         conn.close()
         
+        # Emit cart changed event to update badge across app
+        try:
+            AppState.emit('cart_changed')
+        except Exception:
+            pass
+        
+        # Show success indicator
+        AppState.show_success()
         refresh_cart(e)
     
     # deleting from cart logic
@@ -81,6 +89,14 @@ def CartView():
         conn.commit()
         conn.close()
         
+        # Emit cart changed event to update badge across app
+        try:
+            AppState.emit('cart_changed')
+        except Exception:
+            pass
+        
+        # Show success indicator
+        AppState.show_success()
         show_snackbar(e, "Item removed from cart")
         refresh_cart(e)
     
@@ -220,6 +236,14 @@ def CartView():
             
             conn.commit()
             
+            # Emit cart changed event to update badge across app
+            try:
+                AppState.emit('cart_changed')
+            except Exception:
+                pass
+            
+            # Show success indicator
+            AppState.show_success()
             show_snackbar(e, f"Order #{order_id} created successfully!")
             refresh_cart(e)
             

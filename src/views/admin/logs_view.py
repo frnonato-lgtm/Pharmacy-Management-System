@@ -2,7 +2,7 @@
 
 import flet as ft
 from services.database import get_db_connection
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def SystemLogs():
     """System logs and activity monitoring with real data."""
@@ -237,8 +237,19 @@ def SystemLogs():
         )
     
     def get_time_ago(log_time):
-        """Convert datetime to 'time ago' format."""
-        now = datetime.now()
+        """Convert UTC datetime to 'time ago' format."""
+        # Use UTC time since SQLite stores CURRENT_TIMESTAMP in UTC
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+        # Handle potential microseconds in timestamp
+        try:
+            if '.' in str(log_time):
+                log_time = datetime.strptime(str(log_time).split('.')[0], "%Y-%m-%d %H:%M:%S")
+            else:
+                log_time = datetime.strptime(str(log_time), "%Y-%m-%d %H:%M:%S")
+        except:
+            return str(log_time)
+        
         diff = now - log_time
         
         if diff.days > 30:
@@ -270,18 +281,32 @@ def SystemLogs():
         
         # Filter by date
         if date_range != "all":
-            now = datetime.now()
+            # Use UTC since SQLite stores CURRENT_TIMESTAMP in UTC
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            
             if date_range == "today":
-                cutoff = now.replace(hour=0, minute=0, second=0)
+                # Get start of today (UTC)
+                cutoff = now.replace(hour=0, minute=0, second=0, microsecond=0)
             elif date_range == "week":
                 cutoff = now - timedelta(days=7)
             else:  # month
                 cutoff = now - timedelta(days=30)
             
-            all_logs = [
-                log for log in all_logs 
-                if datetime.strptime(log['timestamp'], "%Y-%m-%d %H:%M:%S") >= cutoff
-            ]
+            # Filter with proper timestamp parsing
+            filtered_logs = []
+            for log in all_logs:
+                try:
+                    # Handle potential microseconds in timestamp
+                    timestamp_str = str(log['timestamp']).split('.')[0]
+                    log_datetime = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                    
+                    if log_datetime >= cutoff:
+                        filtered_logs.append(log)
+                except:
+                    # If parsing fails, include the log to be safe
+                    filtered_logs.append(log)
+            
+            all_logs = filtered_logs
         
         # Filter by search
         if search_query:

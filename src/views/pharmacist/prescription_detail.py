@@ -268,51 +268,63 @@ def PrescriptionDetailView(prescription_id):
     
     # Logic for Approving
     def approve_prescription(e):
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE prescriptions 
-            SET status = 'Approved', pharmacist_id = ?, pharmacist_notes = ?, reviewed_date = ?
-            WHERE id = ?
-        """, (user['id'], pharmacist_notes_field.value, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rx['id']))
-        
-        # Log the action
-        cursor.execute("INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (?, ?, ?, ?)", 
-                      (user['id'], 'prescription_approved', f"Approved Rx #{rx['id']}", datetime.now()))
-        
-        conn.commit()
-        conn.close()
-        
-        e.page.snack_bar = ft.SnackBar(content=ft.Text("Approved!"), bgcolor="primary")
-        e.page.snack_bar.open = True
-        e.page.go("/pharmacist/prescriptions")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Update prescription status to Approved
+            cursor.execute("""
+                UPDATE prescriptions 
+                SET status = 'Approved', pharmacist_id = ?, pharmacist_notes = ?, reviewed_date = ?
+                WHERE id = ?
+            """, (user['id'], pharmacist_notes_field.value or "", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rx['id']))
+            
+            conn.commit()
+            conn.close()
+            
+            # Show success message
+            e.page.snack_bar = ft.SnackBar(content=ft.Text("Prescription Approved Successfully"), bgcolor="primary")
+            e.page.snack_bar.open = True
+            e.page.update()
+            
+            # Navigate back to prescriptions list
+            e.page.go("/pharmacist/prescriptions")
+            
+        except Exception as ex:
+            print(f"Error approving prescription: {str(ex)}")
+            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor="error")
+            e.page.snack_bar.open = True
+            e.page.update()
 
     # Logic for Rejecting
     def reject_prescription(e):
-        if not pharmacist_notes_field.value:
-            e.page.snack_bar = ft.SnackBar(content=ft.Text("Please add a note explaining rejection"), bgcolor="error")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Update prescription status to Rejected
+            cursor.execute("""
+                UPDATE prescriptions 
+                SET status = 'Rejected', pharmacist_id = ?, pharmacist_notes = ?, reviewed_date = ?
+                WHERE id = ?
+            """, (user['id'], pharmacist_notes_field.value or "", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rx['id']))
+            
+            conn.commit()
+            conn.close()
+            
+            # Show success message
+            e.page.snack_bar = ft.SnackBar(content=ft.Text("Prescription Rejected Successfully"), bgcolor="error")
             e.page.snack_bar.open = True
             e.page.update()
-            return
             
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE prescriptions 
-            SET status = 'Rejected', pharmacist_id = ?, pharmacist_notes = ?, reviewed_date = ?
-            WHERE id = ?
-        """, (user['id'], pharmacist_notes_field.value, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rx['id']))
-        
-        # Log the action
-        cursor.execute("INSERT INTO activity_log (user_id, action, details, timestamp) VALUES (?, ?, ?, ?)", 
-                      (user['id'], 'prescription_rejected', f"Rejected Rx #{rx['id']}", datetime.now()))
-        
-        conn.commit()
-        conn.close()
-        
-        e.page.snack_bar = ft.SnackBar(content=ft.Text("Rejected."), bgcolor="error")
-        e.page.snack_bar.open = True
-        e.page.go("/pharmacist/prescriptions")
+            # Navigate back to prescriptions list
+            e.page.go("/pharmacist/prescriptions")
+            
+        except Exception as ex:
+            print(f"Error rejecting prescription: {str(ex)}")
+            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor="error")
+            e.page.snack_bar.open = True
+            e.page.update()
 
     # Call this once at startup to render the View Mode
     update_prescription_display(None)

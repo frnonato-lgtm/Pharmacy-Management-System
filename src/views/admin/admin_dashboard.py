@@ -280,6 +280,7 @@ def AdminDashboard():
                         ft.TextButton("View All →", on_click=lambda e: e.page.go("/admin/logs")),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Divider(),
+                    
                     *activity_list,
                 ], spacing=10),
                 padding=20,
@@ -287,6 +288,7 @@ def AdminDashboard():
                 border_radius=10,
                 border=ft.border.all(1, "outlineVariant"),
                 expand=2,
+                height=450,
             ),
             
             # System health - REAL STATUS
@@ -341,6 +343,7 @@ def AdminDashboard():
                 border_radius=10,
                 border=ft.border.all(1, "outlineVariant"),
                 expand=1,
+                height=450,
             ),
-        ], spacing=15),
-    ], scroll=ft.ScrollMode.AUTO, spacing=0)
+        ], spacing=15, vertical_alignment=ft.CrossAxisAlignment.START, expand=True),
+    ], scroll=ft.ScrollMode.AUTO, spacing=0, expand=True)

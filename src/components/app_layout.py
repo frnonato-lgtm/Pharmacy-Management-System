@@ -37,6 +37,34 @@ class AppLayout(ft.Row):
             bgcolor="surfaceVariant",
         )
 
+        # Action handlers for navigation buttons
+        def go_back(e):
+            """Go back in navigation history or to landing page from dashboard"""
+            # If currently on dashboard, go to landing page
+            if self.page.route == "/dashboard":
+                self.page.go("/")
+            elif len(self.page.views) > 1:
+                self.page.views.pop()
+                # Update cart count before going back
+                self.update_cart_count()
+                self.page.go(self.page.views[-1].route)
+            else:
+                # Fallback to dashboard if no history
+                self.update_cart_count()
+                self.page.go("/dashboard")
+        
+        def go_home(e):
+            """Navigate to dashboard (home page)"""
+            self.update_cart_count()
+            self.page.go("/dashboard")
+        
+        def refresh_page(e):
+            """Refresh the current page and update sidebar cart count"""
+            # Update cart count in sidebar before refreshing
+            self.update_cart_count()
+            current_route = self.page.route
+            self.page.go(current_route)
+
         # Top Header Bar
         self.top_bar = ft.Container(
             padding=ft.padding.symmetric(horizontal=20, vertical=10),
@@ -45,23 +73,60 @@ class AppLayout(ft.Row):
             content=ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
+                    # Left: Go Back button
+                    ft.IconButton(
+                        icon=ft.Icons.ARROW_BACK,
+                        icon_size=24,
+                        tooltip="Go Back",
+                        on_click=go_back
+                    ),
+                    # Center: User Info
                     ft.Column([
                         ft.Text(f"{user_name}", size=16, weight="bold"),
                         ft.Text(f"{user_role}", size=12, color="outline"),
-                    ], spacing=2),
-                    ft.IconButton(ft.Icons.DARK_MODE, on_click=toggle_theme)
+                    ], spacing=2, expand=True),
+                    # Right: Action buttons (Home, Refresh, Dark Mode)
+                    ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.HOME,
+                            icon_size=24,
+                            tooltip="Go to Dashboard",
+                            on_click=go_home
+                        ),
+                        ft.IconButton(
+                            icon=ft.Icons.REFRESH,
+                            icon_size=24,
+                            tooltip="Refresh Page",
+                            on_click=refresh_page
+                        ),
+                        ft.IconButton(
+                            ft.Icons.DARK_MODE,
+                            icon_size=24,
+                            tooltip="Toggle Theme",
+                            on_click=toggle_theme
+                        )
+                    ], spacing=0)
                 ]
             )
         )
 
         # Main Content Area (where the pages load)
+        # Create a scrollable container for content only, header stays fixed
+        self.scrollable_content = ft.Column(
+            expand=True,
+            scroll=ft.ScrollMode.AUTO,
+            controls=[
+                ft.Container(content=content_control, expand=True, padding=20)
+            ]
+        )
+        
         self.content_area = ft.Column(
             expand=True, 
             controls=[
-                self.top_bar,
-                ft.Container(content=content_control, expand=True, padding=20)
+                self.top_bar,  # Fixed header - stays at top always
+                self.scrollable_content  # Only this scrolls
             ],
-            scroll=ft.ScrollMode.AUTO
+            spacing=0
         )
 
         self.controls = [self.rail, ft.VerticalDivider(width=1), self.content_area]
@@ -149,3 +214,32 @@ class AppLayout(ft.Row):
         elif label == "Users": self.page.go("/admin/users")
         elif label == "Reports": self.page.go("/admin/reports")
         elif label == "Logs": self.page.go("/admin/logs")
+
+    # Update cart count in sidebar (for real-time sync)
+    def update_cart_count(self):
+        """Refresh the cart count in the sidebar for Patient roles"""
+        user = AppState.get_user()
+        if user and user['role'] == "Patient":
+            try:
+                cart_count = 0
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT SUM(quantity) FROM cart WHERE patient_id = ?", (user['id'],))
+                res = cursor.fetchone()
+                if res and res[0]:
+                    cart_count = res[0]
+                conn.close()
+                
+                # Update the cart label in the rail destinations
+                for i, dest in enumerate(self.rail.destinations):
+                    if "My Cart" in dest.label:
+                        cart_label = f"My Cart ({cart_count})" if cart_count > 0 else "My Cart"
+                        # Update the destination label
+                        self.rail.destinations[i] = ft.NavigationRailDestination(
+                            icon=ft.Icons.SHOPPING_CART, 
+                            label=cart_label
+                        )
+                        self.page.update()
+                        break
+            except:
+                pass

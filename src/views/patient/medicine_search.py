@@ -48,6 +48,64 @@ def MedicineSearch():
     # container that holds all the results
     results_container = ft.Column(spacing=10)
     
+    # Cart badge container for display
+    cart_badge_text = ft.Text("0", size=9, weight="bold", color="onPrimary")
+    cart_badge = ft.Container(
+        content=cart_badge_text,
+        padding=ft.padding.all(4),
+        bgcolor="error",
+        width=24,
+        height=24,
+        border_radius=12,
+        alignment=ft.alignment.center,
+    )
+    
+    def get_cart_count():
+        """Get the current cart item count."""
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS cart (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    patient_id INTEGER NOT NULL,
+                    medicine_id INTEGER NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute(
+                "SELECT COALESCE(SUM(quantity), 0) FROM cart WHERE patient_id = ?",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            conn.close()
+            return int(row[0]) if row else 0
+        except Exception:
+            return 0
+    
+    def update_cart_badge_display():
+        """Update the badge text with current cart count."""
+        count = get_cart_count()
+        cart_badge_text.value = str(count)
+    
+    def view_cart(e):
+        """Navigate to cart."""
+        try:
+            e.page.go('/patient/cart')
+        except Exception:
+            pass
+    
+    # Listen for cart changes
+    def on_cart_changed(*args, **kwargs):
+        """Update badge when cart changes."""
+        update_cart_badge_display()
+    
+    AppState.add_listener('cart_changed', on_cart_changed)
+    
+    # Initial cart count
+    update_cart_badge_display()
+    
     # helper for showing toast messages
     def show_snackbar(e, message, error=False):
         e.page.snack_bar = ft.SnackBar(
@@ -92,6 +150,9 @@ def MedicineSearch():
                     WHERE id = ?
                 """, (existing[0],))
                 show_snackbar(e, f"Updated {medicine_name} quantity in cart")
+                # Increment badge count immediately for instant feedback
+                current_count = int(cart_badge_text.value)
+                cart_badge_text.value = str(current_count + 1)
             else:
                 # if no, insert a new row
                 cursor.execute("""
@@ -99,6 +160,9 @@ def MedicineSearch():
                     VALUES (?, ?, 1)
                 """, (user_id, medicine_id))
                 show_snackbar(e, f"Added {medicine_name} to cart")
+                # Increment badge count immediately for instant feedback
+                current_count = int(cart_badge_text.value)
+                cart_badge_text.value = str(current_count + 1)
             
             conn.commit()
             
@@ -288,10 +352,30 @@ def MedicineSearch():
         def update(self): pass
     load_medicines(type('Event', (), {'page': FakePage()})())
     
-    # Main layout structure
+    # Main layout structure with cart badge in top-right
+    header_row = ft.Row([
+        ft.Column([
+            ft.Text("Search Medicines", size=28, weight="bold"),
+            ft.Text("Browse our available medicines and add them to your cart", size=14, color="outline"),
+        ], expand=True),
+        # Cart icon with badge on the right
+        ft.Stack([
+            ft.IconButton(
+                ft.Icons.SHOPPING_CART,
+                icon_size=28,
+                on_click=view_cart,
+                tooltip="View Cart",
+            ),
+            ft.Container(
+                content=cart_badge,
+                left=24,
+                top=0,
+            )
+        ], width=70, height=48),
+    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.START)
+    
     return ft.Column([
-        ft.Text("Search Medicines", size=28, weight="bold"),
-        ft.Text("Browse our available medicines and add them to your cart", size=14, color="outline"),
+        header_row,
         
         ft.Container(height=20),
         

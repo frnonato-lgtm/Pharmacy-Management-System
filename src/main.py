@@ -1,6 +1,7 @@
 import flet as ft
 from services.database import init_db
 from state.app_state import AppState
+import ctypes
 
 # Import Main Views
 from views.landing_page import LandingPage
@@ -42,18 +43,21 @@ from views.staff.patient_search import StaffPatientSearch
 from views.staff.patient_detail import StaffPatientDetail
 from views.staff.all_patients import AllPatientsView
 from views.staff.help_desk import HelpDeskView
-
 def main(page: ft.Page):
-    page.title = "Kaputt Kommandos PMS"
-    page.window_width = 1024
-    page.window_height = 768
+    page.title = "PharmaOps PMS"
+    page.window_width = 1280
+    page.window_height = 720
     page.window_resizable = True 
     
-    # Center the app
+    # Center the app (Still not working)
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     try: page.window_center()
     except: pass 
+    
+    page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER 
     
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
     page.theme_mode = ft.ThemeMode.LIGHT 

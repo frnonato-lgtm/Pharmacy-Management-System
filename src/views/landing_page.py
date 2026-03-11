@@ -47,7 +47,7 @@ def LandingPage(page: ft.Page):
                         alignment=ft.alignment.center,
                         content=ft.Column([
                             ft.Icon(name=ft.Icons.LOCAL_PHARMACY, size=70, color="onPrimaryContainer"),
-                            ft.Text("Kaputt Kommando's", size=36, weight="bold", color="onPrimaryContainer", text_align="center"),
+                            ft.Text("PharmaOps", size=36, weight="bold", color="onPrimaryContainer", text_align="center"),
                             # Fixed color visibility
                             ft.Text("Pharmacy Management System", size=18, color="onPrimaryContainer", weight="w500", text_align="center"),
                             ft.Text("Today Health is Caring • For Future Start With Your Health", size=12, italic=True, color="onPrimaryContainer", text_align="center"),
@@ -92,7 +92,7 @@ def LandingPage(page: ft.Page):
             ),
             
             ft.Container(height=50),
-            ft.Text("Group 5: Colico | David | Nonato", size=11, color="outline"),
+            ft.Text("Group 5: Colico | Nonato", size=11, color="outline"),
             ft.Container(height=20),
         ]
     )

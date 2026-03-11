@@ -1,9 +1,9 @@
 # Pharmacy Management System (PMS)
-**Group 5 - Kaputt Kommandos**  
-*CCCS 106 - Application Development and Emerging Technologies*
+**Group 5 - PharmaOps**  
+*CCCS 106 - Application Development and Emerging Technologies | CS 3110 - Software Engineering 1 | CS 3212 - Software Engineering 2*
 
 ## Project Overview
-The **Kaputt Kommandos PMS** is a modern desktop application designed to streamline daily pharmacy operations. It handles user authentication, inventory tracking, prescription validation, billing, and patient management.
+The **PharmaOps PMS** is a modern desktop application designed to streamline daily pharmacy operations. It handles user authentication, inventory tracking, prescription validation, billing, and patient management.
 
 Built using **Python** and **Flet** (Flutter for Python), the system features a responsive, material-design interface with **Dark Mode** support and **Role-Based Access Control (RBAC)**.
 
@@ -12,9 +12,8 @@ Built using **Python** and **Flet** (Flutter for Python), the system features a 
 ## The Team
 | Name | Role | Responsibility |
 | :--- | :--- | :--- |
-| **Carl Renz Colico** | Product Owner / PM | Product Lead / Vision & Feature Prioritization, UI/UX & Accessibility Designer |
-| **Kenji Nathaniel David** | Product Owner | QA / Test Coordinator, Documentation & Release Manager |
-| **Francis Gabriel Nonato** | Program Manager | Lead Developer, UI/UX & Accessibility Designer |
+| **Carl Renz Colico** | Product Owner / PM | Product Lead / Vision & Feature Prioritization, UI/UX & Accessibility Designer, QA / Test Coordinator, Documentation |
+| **Francis Gabriel Nonato** | Program Manager | Lead Developer, UI/UX & Accessibility Designer, Documentation & Release Manager |
 
 ---
 

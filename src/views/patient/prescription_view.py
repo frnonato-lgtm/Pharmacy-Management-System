@@ -75,6 +75,20 @@ def PatientPrescriptionsView():
     # --- LOGIC FOR THE "NEW PRESCRIPTION" POPUP ---
     def submit_prescription_dialog(e):
         
+        # Get list of available medicines for dropdown
+        conn_med = get_db_connection()
+        cursor_med = conn_med.cursor()
+        cursor_med.execute("SELECT id, name FROM medicines WHERE stock > 0 ORDER BY name")
+        available_medicines = cursor_med.fetchall()
+        conn_med.close()
+        
+        # Get list of doctors/pharmacists for dropdown
+        conn_doc = get_db_connection()
+        cursor_doc = conn_doc.cursor()
+        cursor_doc.execute("SELECT id, full_name FROM users WHERE role IN ('Pharmacist', 'Doctor', 'Staff') ORDER BY full_name")
+        available_doctors = cursor_doc.fetchall()
+        conn_doc.close()
+        
         # A helper to make all input fields look the same
         def create_input(label, multiline=False, keyboard_type=None):
             return ft.TextField(
@@ -87,9 +101,22 @@ def PatientPrescriptionsView():
                 keyboard_type=keyboard_type if keyboard_type else None,
             )
 
-        # Define the input fields
-        doctor_name = create_input("Doctor's Name *")
-        medicine_name = create_input("Medicine Prescribed *")
+        # Doctor dropdown - pre-selected with current user if they're a doctor
+        doctor_dropdown = ft.Dropdown(
+            label="Doctor's Name *",
+            expand=True,
+            border_color="outline",
+            options=[ft.dropdown.Option(str(doc[0]), doc[1]) for doc in available_doctors],
+        )
+        
+        # Medicine dropdown - showing only available medicines with stock
+        medicine_dropdown = ft.Dropdown(
+            label="Medicine Prescribed *",
+            expand=True,
+            border_color="outline",
+            options=[ft.dropdown.Option(str(med[0]), med[1]) for med in available_medicines],
+        )
+        
         dosage = create_input("Dosage (e.g., 500mg, 1 tablet) *")
         frequency = create_input("Frequency (e.g., Once daily) *")
         # Ensure duration is a number for the database
@@ -102,7 +129,7 @@ def PatientPrescriptionsView():
         # The logic that runs when "Submit" is clicked
         def save_prescription(dialog_e):
             # 1. Validation: Check if required fields are empty
-            if not all([doctor_name.value, medicine_name.value, dosage.value, frequency.value, duration.value]):
+            if not all([doctor_dropdown.value, medicine_dropdown.value, dosage.value, frequency.value, duration.value]):
                 error_text.value = "Please fill in all required fields!"
                 dialog_e.control.page.update()
                 return
@@ -119,17 +146,22 @@ def PatientPrescriptionsView():
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 
-                # --- FIX: AUTO-DETECT MEDICINE ---
-                # We search the database for the medicine name the user typed.
-                # If it exists, we grab its ID. This links the prescription to the inventory.
-                cursor.execute("SELECT id FROM medicines WHERE name LIKE ?", (f"%{medicine_name.value}%",))
-                match = cursor.fetchone()
+                # Get the selected doctor's name from the dropdown
+                doctor_id = int(doctor_dropdown.value)
+                cursor.execute("SELECT full_name FROM users WHERE id = ?", (doctor_id,))
+                doctor_result = cursor.fetchone()
+                doctor_name = doctor_result[0] if doctor_result else "Unknown Doctor"
                 
-                # If match found, use the ID. If not, it's None (Pharmacist will fix it later)
-                medicine_id = match[0] if match else None
+                # Get the selected medicine ID from dropdown
+                medicine_id = int(medicine_dropdown.value)
+                
+                # Get medicine name for notes
+                cursor.execute("SELECT name FROM medicines WHERE id = ?", (medicine_id,))
+                medicine_result = cursor.fetchone()
+                medicine_name = medicine_result[0] if medicine_result else "Unknown Medicine"
                 
                 # Create a combined note string for legacy support
-                notes_text = f"Doctor: {doctor_name.value}\nMedicine: {medicine_name.value}\nDosage: {dosage.value}\nFrequency: {frequency.value}\nDuration: {duration_days} days\nNotes: {additional_notes.value or 'None'}"
+                notes_text = f"Doctor: {doctor_name}\nMedicine: {medicine_name}\nDosage: {dosage.value}\nFrequency: {frequency.value}\nDuration: {duration_days} days\nNotes: {additional_notes.value or 'None'}"
                 
                 # --- FIX: INSERT CORRECT DATA ---
                 # We are explicitly inserting dosage, frequency, duration, and doctor_name
@@ -146,7 +178,7 @@ def PatientPrescriptionsView():
                     dosage.value,
                     frequency.value,
                     duration_days,
-                    doctor_name.value
+                    doctor_name
                 ))
                 
                 conn.commit()
@@ -185,12 +217,12 @@ def PatientPrescriptionsView():
                 padding=10,
                 content=ft.Column([
                     ft.Text("Enter details from your doctor's prescription:", size=13, color="outline"),
-                    doctor_name,
-                    medicine_name,
+                    doctor_dropdown,
+                    medicine_dropdown,
                     dosage,
                     frequency,
                     duration,
-                    ft.Text("Note: Medicine stock and pricing will be determined by the pharmacist", 
+                    ft.Text("✓ Only medicines with available stock are shown", 
                            size=11, color="outline", italic=True),
                     additional_notes,
                     error_text,

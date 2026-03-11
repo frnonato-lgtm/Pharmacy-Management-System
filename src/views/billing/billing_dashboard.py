@@ -201,8 +201,8 @@ def BillingDashboard():
                         ], spacing=10),
                         padding=20, bgcolor="surface", border_radius=10, border=ft.border.all(1, "outlineVariant"), expand=1,
                     ),
-                ], spacing=15, vertical_alignment=ft.CrossAxisAlignment.START),
-            ], spacing=0),
+                ], spacing=15, vertical_alignment=ft.CrossAxisAlignment.START, expand=True),
+            ], spacing=0, expand=True),
             padding=20,
         ),
-    ], scroll=ft.ScrollMode.AUTO, spacing=0)
+    ], scroll=ft.ScrollMode.AUTO, spacing=0, expand=True)
