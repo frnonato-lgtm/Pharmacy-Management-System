@@ -13,6 +13,7 @@ Built using **Python** and **Flet** (Flutter for Python), the system features a 
 | Name | Role | Responsibility |
 | :--- | :--- | :--- |
 | **Carl Renz Colico** | Product Owner / PM | Product Lead / Vision & Feature Prioritization, UI/UX & Accessibility Designer, QA / Test Coordinator, Documentation |
+| **Kenji Nathaniel David** | | |
 | **Francis Gabriel Nonato** | Program Manager | Lead Developer, UI/UX & Accessibility Designer, Documentation & Release Manager |
 
 ---
@@ -101,8 +102,6 @@ New users can also create an account using the **"Create Account"** button on th
 
 ---
 
----
-
 Below are screenshots demonstrating overall features of the app:
 
 | Feature | Screenshot |
@@ -124,8 +123,6 @@ Below are screenshots demonstrating overall features of the app:
 
 ---
 
----
-
 Below are screenshots demonstrating various features of patient manual: 
 | Feature | Patient Manual | Screenshot | 
 |----------|-------------|-------------| 
@@ -135,8 +132,6 @@ Below are screenshots demonstrating various features of patient manual:
 | **Viewing Patient Orders** | Displays a list of all past and current orders, including order status and purchase history also total amount for easy tracking | ![Viewing All Recent Orders](src/assets/patient_view_all)<br>![View All Orders Page](src/assets/patient_view_all_orders_page.png) | 
 | **Patient Side-bar Navigation**| Provides easy access to all patient features such as browsing medicine, orders, cart, bills, and profile through a clean navigation menu| ![Patient Side Navigation Bar](src/assets/patient_nav_bar.png) | 
 | **Viewing Patient Profile** | Shows the patient’s personal information, including contact details, account profile, as well as logout button and with options for updates | ![Patient Profile](src/assets/patient_profile)<br>![Patient Profile Page](src/assets/patient_profile_page.png) |
-
----
 
 ---
 
@@ -150,8 +145,6 @@ Below are screenshots demonstrating various features of admin manual:
 | **Admin Nav Bar** | Provides easy navigation to all admin tools and features through a structured and organized sidebar | ![Admin Navigation Bar](src/assets/admin_nav_bar.png) | 
 | **Admin Manage Inventory Stock** | Allows the admin to view, update, and manage available inventory, including adding stock and monitoring low quantities | ![Manage Inventory Stock](src/assets/admin_manage_stock.png) |
 | **Admin Alert System Notification** | Shows system notifications and alerts for critical events such as low stock, prescriptions | ![Alert System Notification](src/assets/admin_system_activity.png) |
-
----
 
 ---
 
@@ -171,8 +164,6 @@ Below are screenshots demonstrating various features of pharmacist manual:
 
 ---
 
----
-
 Below are screenshots demonstrating various features of inventory manager manual:
 
 | Feature | Description | Screenshot |
@@ -181,8 +172,6 @@ Below are screenshots demonstrating various features of inventory manager manual
 | **Inventory Manager Manage Stock** | Allows the inventory manager to view all medicines, update quantities, restock items, and monitor product availability | ![Manage Stock](src/assets/invmng_manage_stock.png)<br>![Manage Stock Page](src/assets/invmng_stock_management_page.png) |
 | **Adding Medicine** | Enables the inventory manager to add new medicines to the system by entering details such as name, price, category, stock quantity,supplier and expiry date | ![Add Medicine](src/assets/invmng_add_medicines.png) |
 | **Inventory Manager Side-Navigation Bar** | Provides quick access to all inventory management features through an organized navigation sidebar| ![Inventory Manager Nav Bar](src/assets/invmng_side_nav.png) |
-
----
 
 ---
 
@@ -201,8 +190,6 @@ Below are screenshots demonstrating various features of billing clerk manual:
 
 ---
 
----
-
 Below are screenshots demonstrating various features of staff member(s) manual:
 
 | Feature | Description | Screenshot |
@@ -215,6 +202,5 @@ Below are screenshots demonstrating various features of staff member(s) manual:
 | **Recent Activity Preview** | Displays the latest staff-related activities, offering a quick overview of recent system interactions. | ![Activity Preview](src/assets/staff_recent_activity.png) |
 | **Staff Guidelines** | Provides important guidelines and protocols that staff members must follow while using the system | ![Staff Guidelines](src/assets/staff_guidelines.png) |
 | **Staff Side-Navigation** | Offers easy access to all staff tools and pages through an organized navigation panel | ![Staff Side Nav](src/assets/staff_side_nav.png) |
-
 
 ---

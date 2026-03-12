@@ -92,7 +92,7 @@ def LandingPage(page: ft.Page):
             ),
             
             ft.Container(height=50),
-            ft.Text("Group 5: Colico | Nonato", size=11, color="outline"),
+            ft.Text("Group 5: Colico | David | Nonato", size=11, color="outline"),
             ft.Container(height=20),
         ]
     )
