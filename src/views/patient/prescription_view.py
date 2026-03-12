@@ -4,6 +4,7 @@ import flet as ft
 from state.app_state import AppState
 from services.database import get_db_connection
 from datetime import datetime
+from utils.notifications import show_success, show_error
 
 def PatientPrescriptionsView():
     """View patient's own prescriptions and submit new ones."""
@@ -131,14 +132,16 @@ def PatientPrescriptionsView():
             # 1. Validation: Check if required fields are empty
             if not all([doctor_dropdown.value, medicine_dropdown.value, dosage.value, frequency.value, duration.value]):
                 error_text.value = "Please fill in all required fields!"
+                show_error(dialog_e.control.page, "Please fill in all required fields!")
                 dialog_e.control.page.update()
                 return
-            
+
             # 2. Validation: Check if duration is actually a number
             try:
                 duration_days = int(duration.value)
             except:
                 error_text.value = "Duration must be a number (days)"
+                show_error(dialog_e.control.page, "Duration must be a number!")
                 dialog_e.control.page.update()
                 return
             
@@ -183,24 +186,20 @@ def PatientPrescriptionsView():
                 
                 conn.commit()
                 conn.close()
-                
+
                 # Close the popup
                 dialog_e.control.page.close(prescription_form)
-                
+
                 # Show success message
-                dialog_e.control.page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Prescription submitted! Waiting for review."),
-                    bgcolor="primary"
-                )
-                dialog_e.control.page.snack_bar.open = True
-                dialog_e.control.page.update()
-                
+                show_success(dialog_e.control.page, "Prescription submitted! Waiting for review.")
+
                 # Reload the page to show the new item
                 dialog_e.control.page.go("/patient/prescriptions")
                 
             except Exception as ex:
                 # If something crashes, show the error
                 error_text.value = f"Error: {str(ex)}"
+                show_error(dialog_e.control.page, "Failed to submit prescription")
                 dialog_e.control.page.update()
 
         # The actual Dialog Window UI

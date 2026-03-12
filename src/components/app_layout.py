@@ -1,6 +1,7 @@
 import flet as ft
 from state.app_state import AppState
 from services.database import get_db_connection
+from utils.notifications import show_success, LOGOUT_SUCCESS
 
 # This handles the Sidebar layout and the Top Header
 class AppLayout(ft.Row):
@@ -188,13 +189,14 @@ class AppLayout(ft.Row):
     def nav_change(self, e):
         index = e.control.selected_index
         label = e.control.destinations[index].label
-        
+
         # Clean label if it has numbers (e.g. "My Cart (2)" -> "My Cart")
         if "(" in label:
             label = label.split(" (")[0]
 
         if label == "Logout":
             AppState.set_user(None)
+            show_success(self.page, LOGOUT_SUCCESS, duration=2)
             self.page.go("/") 
         elif label == "Dashboard": self.page.go("/dashboard")
         # Patient links

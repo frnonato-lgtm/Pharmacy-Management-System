@@ -5,6 +5,7 @@ from datetime import datetime
 from services.database import get_db_connection
 from state.app_state import AppState
 from components.navigation_header import NavigationHeader
+from utils.notifications import show_success, show_error, INVOICE_CREATED, REQUIRED_FIELDS
 import random
 
 def CreateInvoicesView():
@@ -93,14 +94,13 @@ def CreateInvoicesView():
     # --- CREATE LOGIC ---
     def create_invoice(e):
         if not patient_dropdown.value:
-            e.page.snack_bar = ft.SnackBar(content=ft.Text("Please select a patient"), bgcolor="error")
-            e.page.snack_bar.open = True
+            show_error(e.page, REQUIRED_FIELDS)
             e.page.update()
             return
-        
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         try:
             invoice_number = f"INV-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
             patient_id = int(patient_dropdown.value)
@@ -109,37 +109,35 @@ def CreateInvoicesView():
             tax = float(tax_field.value)
             discount = float(discount_field.value)
             total = float(total_field.value)
-            
+
             cursor.execute("""
-                INSERT INTO invoices 
-                (invoice_number, patient_id, order_id, subtotal, tax, discount, total_amount, 
+                INSERT INTO invoices
+                (invoice_number, patient_id, order_id, subtotal, tax, discount, total_amount,
                  status, payment_method, billing_clerk_id, notes, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'Unpaid', ?, ?, ?, ?)
             """, (invoice_number, patient_id, order_id, subtotal, tax, discount, total, payment_method.value, user['id'], notes_field.value or "", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            
+
             invoice_id = cursor.lastrowid
-            
+
             cursor.execute("""
                 INSERT INTO activity_log (user_id, action, details, timestamp)
                 VALUES (?, 'invoice_created', ?, ?)
             """, (user['id'], f"Created invoice {invoice_number} for patient ID {patient_id} - Amount: ₱{total:,.2f}", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            
+
             if order_id:
                 cursor.execute("UPDATE orders SET payment_status = 'Invoiced' WHERE id = ?", (order_id,))
-            
+
             conn.commit()
             conn.close()
-            
-            e.page.snack_bar = ft.SnackBar(content=ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE, color="white"), ft.Text(f"Invoice {invoice_number} created successfully!", color="white")]), bgcolor="primary")
-            e.page.snack_bar.open = True
-            
+
+            show_success(e.page, f"{INVOICE_CREATED} Invoice #{invoice_number}")
+
             e.page.go(f"/billing/invoice/{invoice_id}")
-            
+
         except Exception as ex:
             conn.rollback()
             conn.close()
-            e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error creating invoice: {str(ex)}"), bgcolor="error")
-            e.page.snack_bar.open = True
+            show_error(e.page, f"Error creating invoice: {str(ex)}")
             e.page.update()
     
     # --- PAGE LAYOUT ---

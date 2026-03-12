@@ -3,6 +3,7 @@
 import flet as ft
 from state.app_state import AppState
 from services.database import get_db_connection
+from utils.notifications import show_success, show_error
 
 def ProfileView():
     """Patient profile and account settings."""
@@ -112,13 +113,11 @@ def ProfileView():
                 AppState.set_user(user)
 
                 dialog_e.page.close(edit_dialog)
-                dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text("Profile updated successfully!"), bgcolor="primary")
-                dialog_e.page.snack_bar.open = True
+                show_success(dialog_e.page, "Profile updated successfully!")
                 dialog_e.page.update()
-                
+
             except Exception as ex:
-                dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text(f"Error: {str(ex)}"), bgcolor="error")
-                dialog_e.page.snack_bar.open = True
+                show_error(dialog_e.page, f"Error updating profile")
                 dialog_e.page.update()
             finally:
                 conn.close()
@@ -194,10 +193,9 @@ def ProfileView():
             cursor.execute("UPDATE users SET password = ? WHERE id = ?", (new_password.value, user_data['id']))
             conn.commit()
             conn.close()
-            
+
             dialog_e.page.close(pwd_dialog)
-            dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text("Password changed successfully!"), bgcolor="primary")
-            dialog_e.page.snack_bar.open = True
+            show_success(dialog_e.page, "Password changed successfully!")
             dialog_e.page.update()
         
         pwd_dialog = ft.AlertDialog(
@@ -225,6 +223,7 @@ def ProfileView():
     
     # Navigation Helpers
     def logout(e):
+        show_success(e.page, "Logged out successfully!", duration=2)
         AppState.set_user(None)
         e.page.go("/")
         

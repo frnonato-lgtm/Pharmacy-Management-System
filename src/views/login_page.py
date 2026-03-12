@@ -1,6 +1,7 @@
 import flet as ft
 from services.database import authenticate_user, get_db_connection
 from state.app_state import AppState
+from utils.notifications import show_success, show_error, show_warning, LOGIN_SUCCESS, LOGIN_FAILED, SIGNUP_SUCCESS, REQUIRED_FIELDS, PASSWORD_MISMATCH, DUPLICATE_USERNAME
 
 def LoginPage(page: ft.Page, role_param="Patient"):
     
@@ -66,12 +67,15 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             # Check if they are logging into the correct role
             if user['role'] != role_param and user['role'] != 'Admin':
                 login_error.value = f"Access Denied. You are not a {role_param}."
+                show_warning(e.page, f"Access Denied. You are not a {role_param}.")
                 page.update()
                 return
             AppState.set_user(user)
+            show_success(e.page, f"{LOGIN_SUCCESS} {user['full_name']} as {user['role']}")
             page.go("/dashboard")
         else:
             login_error.value = "Invalid Username or Password"
+            show_error(e.page, LOGIN_FAILED)
             page.update()
 
     # --- SIGNUP INPUTS ---
@@ -93,14 +97,17 @@ def LoginPage(page: ft.Page, role_param="Patient"):
         # Basic validation
         if not all([su_first.value, su_last.value, su_email.value, su_phone.value, su_user.value, su_pass.value]):
             su_error.value = "Please fill in all required fields."
+            show_error(e.page, REQUIRED_FIELDS)
             page.update()
             return
         if su_pass.value != su_confirm.value:
             su_error.value = "Passwords do not match."
+            show_error(e.page, PASSWORD_MISMATCH)
             page.update()
             return
         if not su_terms.value:
             su_error.value = "You must agree to the Terms."
+            show_warning(e.page, "Please agree to Terms and Conditions to continue.")
             page.update()
             return
 
@@ -109,7 +116,7 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute(
-                """INSERT INTO users (username, password, role, full_name, last_name, email, phone, dob, address) 
+                """INSERT INTO users (username, password, role, full_name, last_name, email, phone, dob, address)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (su_user.value, su_pass.value, 'Patient', su_first.value, su_last.value, su_email.value, su_phone.value, su_dob.value, su_addr.value)
             )
@@ -117,8 +124,10 @@ def LoginPage(page: ft.Page, role_param="Patient"):
             conn.close()
             su_success.value = "Account created! Please Login."
             su_error.value = ""
+            show_success(e.page, SIGNUP_SUCCESS)
         except:
             su_error.value = "Username already exists."
+            show_error(e.page, DUPLICATE_USERNAME)
         page.update()
 
     # --- NAVIGATION ---

@@ -3,6 +3,7 @@
 import flet as ft
 from services.database import get_db_connection
 from datetime import datetime
+from utils.notifications import show_success, show_error, show_warning, show_info, DELETE_SUCCESS, UPDATE_SUCCESS, CREATE_SUCCESS, REQUIRED_FIELDS, DELETE_CONFIRM
 
 def UserManagement():
     """User management interface with full CRUD operations."""
@@ -36,40 +37,40 @@ def UserManagement():
         try:
             query = search_field.value.lower() if search_field.value else ""
             role = role_filter.value
-            
+
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             # --- NEW LOGIC: Count total users per role ---
             # We need this to know if a user is the "last one standing" in their role
             cursor.execute("SELECT role, COUNT(*) FROM users GROUP BY role")
             counts_result = cursor.fetchall()
-            
+
             # Convert list of tuples to a dictionary: {'Admin': 1, 'Pharmacist': 3}
             # This makes it easy to look up "How many Admins are there?"
             role_counts = {row[0]: row[1] for row in counts_result}
             # ---------------------------------------------
-            
+
             # Normal logic to fetch users for the list
             sql = "SELECT * FROM users WHERE 1=1"
             params = []
-            
+
             if query:
                 sql += " AND (LOWER(username) LIKE ? OR LOWER(full_name) LIKE ?)"
                 params.extend([f"%{query}%", f"%{query}%"])
-            
+
             if role != "All":
                 sql += " AND role = ?"
                 params.append(role)
-            
+
             sql += " ORDER BY created_at DESC"
-            
+
             cursor.execute(sql, params)
             users = cursor.fetchall()
             conn.close()
-            
+
             users_container.controls.clear()
-            
+
             if users:
                 # Table Header
                 users_container.controls.append(
@@ -86,20 +87,22 @@ def UserManagement():
                         border_radius=8,
                     )
                 )
-                
+
                 # Create rows
                 for user in users:
                     # check how many people have this user's role
                     user_role = user['role']
                     total_in_role = role_counts.get(user_role, 0)
-                    
+
                     # If count is 1 (or somehow less), they are the last one.
                     # We pass 'True' if they are the last one.
                     is_last_user = (total_in_role <= 1)
-                    
+
                     users_container.controls.append(
                         create_user_row(user, load_users, is_last_user)
                     )
+                if e:
+                    pass  # Don't show info toast during internal refresh
             else:
                 users_container.controls.append(
                     ft.Container(
@@ -108,12 +111,16 @@ def UserManagement():
                         alignment=ft.alignment.center,
                     )
                 )
-            
-            if e: 
+                if e:
+                    show_warning(e.page, "No users found matching your criteria.", duration=2)
+
+            if e:
                 e.page.update()
-            
+
         except Exception as ex:
             print(f"Error loading users: {ex}")
+            if e:
+                show_error(e.page, "Error loading users.")
     
     # Helper to create a row. 
     # Added 'is_delete_disabled' parameter
@@ -127,15 +134,15 @@ def UserManagement():
                     cursor.execute("DELETE FROM users WHERE id = ?", (user['id'],))
                     conn.commit()
                     conn.close()
-                    
-                    e.page.close(dialog)
-                    e.page.snack_bar = ft.SnackBar(content=ft.Text(f"User '{user['username']}' deleted successfully"), bgcolor="primary")
-                    e.page.snack_bar.open = True
-                    e.page.update()
-                    refresh_callback(e)
+
+                    dialog_e.page.close(dialog)
+                    show_success(dialog_e.page, DELETE_SUCCESS.format(user['username']))
+                    dialog_e.page.update()
+                    refresh_callback(dialog_e)
                 except Exception as ex:
                     print(f"Delete error: {ex}")
-            
+                    show_error(dialog_e.page, "Failed to delete user.")
+
             dialog = ft.AlertDialog(
                 modal=True,
                 title=ft.Text("Confirm Delete"),
@@ -180,32 +187,32 @@ def UserManagement():
                 try:
                     conn = get_db_connection()
                     cursor = conn.cursor()
-                    
+
                     if password_field.value:
                         cursor.execute("""
-                            UPDATE users 
+                            UPDATE users
                             SET full_name=?, last_name=?, email=?, phone=?, role=?, password=?
                             WHERE id=?
-                        """, (fullname_field.value, lastname_field.value, email_field.value, 
+                        """, (fullname_field.value, lastname_field.value, email_field.value,
                               phone_field.value, role_field.value, password_field.value, user['id']))
                     else:
                         cursor.execute("""
-                            UPDATE users 
+                            UPDATE users
                             SET full_name=?, last_name=?, email=?, phone=?, role=?
                             WHERE id=?
-                        """, (fullname_field.value, lastname_field.value, email_field.value, 
+                        """, (fullname_field.value, lastname_field.value, email_field.value,
                               phone_field.value, role_field.value, user['id']))
-                    
+
                     conn.commit()
                     conn.close()
-                    
+
                     dialog_e.page.close(edit_dialog)
-                    dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text("User updated successfully!"), bgcolor="primary")
-                    dialog_e.page.snack_bar.open = True
+                    show_success(dialog_e.page, UPDATE_SUCCESS.format(user['username']))
                     dialog_e.page.update()
                     refresh_callback(dialog_e)
                 except Exception as ex:
                     print(f"Save error: {ex}")
+                    show_error(dialog_e.page, "Failed to update user.")
 
             edit_dialog = ft.AlertDialog(
                 modal=True,
@@ -295,39 +302,37 @@ def UserManagement():
         def save_new_user(dialog_e):
             try:
                 if not username_field.value or not password_field.value:
-                    dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text("Username and password required!"), bgcolor="error")
-                    dialog_e.page.snack_bar.open = True
+                    show_error(dialog_e.page, REQUIRED_FIELDS)
                     dialog_e.page.update()
                     return
-                
+
                 conn = get_db_connection()
                 cursor = conn.cursor()
-                
+
                 cursor.execute("SELECT id FROM users WHERE username = ?", (username_field.value,))
                 if cursor.fetchone():
                     conn.close()
-                    dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text("Username already exists!"), bgcolor="error")
-                    dialog_e.page.snack_bar.open = True
+                    show_error(dialog_e.page, "Username already exists!")
                     dialog_e.page.update()
                     return
-                
+
                 cursor.execute("""
                     INSERT INTO users (username, password, role, full_name, last_name, email, phone, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (username_field.value, password_field.value, role_field.value, 
-                      fullname_field.value, lastname_field.value, email_field.value, 
+                """, (username_field.value, password_field.value, role_field.value,
+                      fullname_field.value, lastname_field.value, email_field.value,
                       phone_field.value, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-                
+
                 conn.commit()
                 conn.close()
-                
+
                 dialog_e.page.close(add_dialog)
-                dialog_e.page.snack_bar = ft.SnackBar(content=ft.Text(f"User '{username_field.value}' created!"), bgcolor="primary")
-                dialog_e.page.snack_bar.open = True
+                show_success(dialog_e.page, CREATE_SUCCESS.format(f"User '{username_field.value}'"))
                 dialog_e.page.update()
-                load_users(dialog_e) 
+                load_users(dialog_e)
             except Exception as ex:
                 print(f"Save new user error: {ex}")
+                show_error(dialog_e.page, "Failed to create user.")
         
         add_dialog = ft.AlertDialog(
             modal=True,

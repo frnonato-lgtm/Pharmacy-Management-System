@@ -3,6 +3,7 @@
 import flet as ft
 from services.database import get_db_connection
 from components.navigation_header import NavigationHeader
+from utils.notifications import show_success, show_error, SEARCH_NO_RESULTS, SEARCH_ERROR
 
 def StaffPatientSearch():
     """Search for patient records with detailed information."""
@@ -83,7 +84,7 @@ def StaffPatientSearch():
         # Clear previous results first
         results_container.controls.clear()
         term = search_field.value
-        
+
         # If box is empty, show a prompt
         if not term:
             results_container.controls.append(
@@ -98,41 +99,53 @@ def StaffPatientSearch():
             )
             e.page.update()
             return
-        
+
         # Search the database
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        # SQL query: Find matching name OR phone number
-        cursor.execute("""
-            SELECT * FROM users 
-            WHERE role = 'Patient' 
-            AND (LOWER(full_name) LIKE ? OR phone LIKE ?)
-            ORDER BY full_name ASC
-        """, (f'%{term.lower()}%', f'%{term}%'))
-        rows = cursor.fetchall()
-        conn.close()
-        
-        if not rows:
-            # Nothing found :(
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            # SQL query: Find matching name OR phone number
+            cursor.execute("""
+                SELECT * FROM users
+                WHERE role = 'Patient'
+                AND (LOWER(full_name) LIKE ? OR phone LIKE ?)
+                ORDER BY full_name ASC
+            """, (f'%{term.lower()}%', f'%{term}%'))
+            rows = cursor.fetchall()
+            conn.close()
+
+            if not rows:
+                # Nothing found :(
+                results_container.controls.append(
+                    ft.Container(
+                        content=ft.Text("No patients found.", size=16, color="error"),
+                        alignment=ft.alignment.center,
+                        padding=20
+                    )
+                )
+                show_error(e.page, SEARCH_NO_RESULTS.format(term), duration=2)
+            else:
+                # Show how many we found
+                results_container.controls.append(ft.Text(f"Found {len(rows)} results:", weight="bold"))
+                # Loop through results and create cards
+                for row in rows:
+                    # Convert tuple to dictionary
+                    p = {
+                        'id': row[0], 'username': row[1], 'full_name': row[4],
+                        'email': row[6], 'phone': row[7], 'created_at': row[10] or "N/A"
+                    }
+                    results_container.controls.append(create_patient_card(p))
+                show_success(e.page, f"Found {len(rows)} patient(s).", duration=2)
+        except Exception as ex:
+            show_error(e.page, SEARCH_ERROR)
             results_container.controls.append(
                 ft.Container(
-                    content=ft.Text("No patients found.", size=16, color="error"),
+                    content=ft.Text("Error during search. Please try again.", size=14, color="error"),
                     alignment=ft.alignment.center,
                     padding=20
                 )
             )
-        else:
-            # Show how many we found
-            results_container.controls.append(ft.Text(f"Found {len(rows)} results:", weight="bold"))
-            # Loop through results and create cards
-            for row in rows:
-                # Convert tuple to dictionary
-                p = {
-                    'id': row[0], 'username': row[1], 'full_name': row[4],
-                    'email': row[6], 'phone': row[7], 'created_at': row[10] or "N/A"
-                }
-                results_container.controls.append(create_patient_card(p))
-        
+
         e.page.update()
     
     # --- PAGE LAYOUT ---

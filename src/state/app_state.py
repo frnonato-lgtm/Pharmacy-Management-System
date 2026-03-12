@@ -1,4 +1,6 @@
 # A simple class to remember who is currently logged in
+import flet as ft
+
 class AppState:
     current_user = None
     app_layout = None  # Reference to AppLayout for global success indicator
@@ -47,7 +49,61 @@ class AppState:
                 AppState._listeners[event_name].remove(callback)
     
     @staticmethod
-    def emit(event_name, *args, **kwargs):
+    def show_toast(page, message, type="success", duration=3):
+        """Show a toast notification using AlertDialog.
+
+        Args:
+            page: The Flet page object
+            message: The message to display
+            type: 'success', 'error', or 'warning'
+            duration: Duration in seconds before auto-dismiss
+        """
+        colors = {
+            "success": "primary",
+            "error": "error",
+            "warning": "warning",
+            "info": "primary"
+        }
+        icons = {
+            "success": ft.Icons.CHECK_CIRCLE,
+            "error": ft.Icons.ERROR,
+            "warning": ft.Icons.WARNING,
+            "info": ft.Icons.INFO
+        }
+
+        # Create a simple dialog as toast
+        dialog = ft.AlertDialog(
+            modal=False,
+            title=None,
+            content=ft.Container(
+                content=ft.Row([
+                    ft.Icon(icons.get(type, ft.Icons.INFO), color="white", size=20),
+                    ft.Text(message, color="white", size=13, expand=True),
+                ], spacing=10, alignment=ft.MainAxisAlignment.CENTER),
+                bgcolor=colors.get(type, "primary"),
+                padding=15,
+                border_radius=8,
+                width=400,
+            ),
+            actions=[],
+        )
+
+        page.open(dialog)
+
+        # Auto-close after duration
+        import threading
+        import time
+        def close_toast():
+            time.sleep(duration)
+            try:
+                page.close(dialog)
+            except:
+                pass
+
+        threading.Thread(target=close_toast, daemon=True).start()
+
+    @staticmethod
+    def emit_event(event_name, *args, **kwargs):
         """Emit an event to all registered listeners."""
         if event_name in AppState._listeners:
             for callback in AppState._listeners[event_name]:

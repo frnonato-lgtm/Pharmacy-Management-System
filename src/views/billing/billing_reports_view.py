@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from services.database import get_db_connection
 from state.app_state import AppState
 from components.navigation_header import NavigationHeader
+from utils.notifications import show_success, show_error
 
 def BillingReportsView():
     """Comprehensive billing reports and overall situation analysis."""
@@ -252,13 +253,15 @@ def BillingReportsView():
                     border=ft.border.all(1, "primary"),
                 )
             )
-            
+
             e.page.update()
-            
+            show_success(e.page, f"Report generated successfully!")
+
         except Exception as ex:
             # Handle errors gracefully
             report_container.controls.clear()
             report_container.controls.append(ft.Text(f"Error generating report: {str(ex)}", color="error"))
+            show_error(e.page, "Failed to generate report")
             if conn: conn.close()
             e.page.update()
     

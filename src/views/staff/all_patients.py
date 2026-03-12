@@ -3,6 +3,7 @@
 import flet as ft
 from services.database import get_db_connection
 from components.navigation_header import NavigationHeader
+from utils.notifications import show_success, show_info
 
 def AllPatientsView():
     """Display all registered patients."""
@@ -77,28 +78,28 @@ def AllPatientsView():
     # --- LOAD DATA ---
     def load_patients(e=None):
         patients_container.controls.clear()
-        
+
         # Get inputs
         txt = search_field.value.lower() if search_field.value else ""
         sort = sort_dropdown.value
-        
+
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         # Build query
         sql = "SELECT * FROM users WHERE role = 'Patient'"
-        
+
         if txt:
             sql += f" AND LOWER(full_name) LIKE '%{txt}%'"
-            
+
         if sort == "name_asc": sql += " ORDER BY full_name ASC"
         elif sort == "name_desc": sql += " ORDER BY full_name DESC"
         elif sort == "newest": sql += " ORDER BY created_at DESC"
-        
+
         cursor.execute(sql)
         rows = cursor.fetchall()
         conn.close()
-        
+
         if rows:
             patients_container.controls.append(ft.Text(f"Total: {len(rows)} patients", color="outline"))
             for idx, row in enumerate(rows):
@@ -107,6 +108,8 @@ def AllPatientsView():
                     'email': row[6], 'phone': row[7]
                 }
                 patients_container.controls.append(create_patient_row(p, idx))
+            if e:
+                show_info(e.page, f"Loaded {len(rows)} patient(s).", duration=2)
         else:
             patients_container.controls.append(
                 ft.Container(
@@ -115,7 +118,7 @@ def AllPatientsView():
                     padding=20
                 )
             )
-        
+
         if e: e.page.update()
         
     # Initial load hack

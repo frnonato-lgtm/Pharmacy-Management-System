@@ -3,6 +3,7 @@
 import flet as ft
 from state import AppState
 from services.database import get_db_connection
+from utils.notifications import show_success, show_error, show_warning, ITEM_REMOVED, ORDER_PLACED, OPERATION_FAILED
 
 def CartView():
     """Shopping cart view with persistent cart data."""
@@ -60,23 +61,23 @@ def CartView():
         if new_quantity <= 0:
             remove_from_cart(cart_id, e)
             return
-        
+
         if new_quantity > stock:
-            show_snackbar(e, f"Only {stock} items available in stock", error=True)
+            show_error(e.page, f"Only {stock} items available in stock")
             return
-        
+
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE cart SET quantity = ? WHERE id = ?", (new_quantity, cart_id))
         conn.commit()
         conn.close()
-        
+
         # Emit cart changed event to update badge across app
         try:
             AppState.emit('cart_changed')
         except Exception:
             pass
-        
+
         # Show success indicator
         AppState.show_success()
         refresh_cart(e)
@@ -88,16 +89,16 @@ def CartView():
         cursor.execute("DELETE FROM cart WHERE id = ?", (cart_id,))
         conn.commit()
         conn.close()
-        
+
         # Emit cart changed event to update badge across app
         try:
             AppState.emit('cart_changed')
         except Exception:
             pass
-        
+
         # Show success indicator
         AppState.show_success()
-        show_snackbar(e, "Item removed from cart")
+        show_success(e.page, ITEM_REMOVED.format("Item"))
         refresh_cart(e)
     
     # helper for showing messages
@@ -184,75 +185,75 @@ def CartView():
     def proceed_to_checkout(e):
         items = load_cart()
         if not items:
-            show_snackbar(e, "Cart is empty", error=True)
+            show_error(e.page, "Cart is empty")
             return
-        
+
         # turning cart into an order
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         try:
             # math for totals
             subtotal = sum(item[3] * item[4] for item in items)
             tax = subtotal * 0.12
             total = subtotal + tax
-            
+
             # create the order
             cursor.execute("""
                 INSERT INTO orders (patient_id, total_amount, status, payment_status)
                 VALUES (?, ?, 'Pending', 'Unpaid')
             """, (user_id, total))
-            
+
             order_id = cursor.lastrowid
-            
+
             # move items to order_items table and reduce stock
             for item in items:
                 medicine_id = item[1]
                 quantity = item[4]
                 unit_price = item[3]
                 subtotal_item = unit_price * quantity
-                
+
                 # check stock one last time
                 cursor.execute("SELECT stock FROM medicines WHERE id = ?", (medicine_id,))
                 current_stock = cursor.fetchone()[0]
-                
+
                 if current_stock < quantity:
                     raise Exception(f"Insufficient stock for {item[2]}")
-                
+
                 cursor.execute("""
                     INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
                     VALUES (?, ?, ?, ?, ?)
                 """, (order_id, medicine_id, quantity, unit_price, subtotal_item))
-                
+
                 # update the stock number
                 cursor.execute("""
-                    UPDATE medicines 
-                    SET stock = stock - ? 
+                    UPDATE medicines
+                    SET stock = stock - ?
                     WHERE id = ?
                 """, (quantity, medicine_id))
-            
+
             # empty the cart
             cursor.execute("DELETE FROM cart WHERE patient_id = ?", (user_id,))
-            
+
             conn.commit()
-            
+
             # Emit cart changed event to update badge across app
             try:
                 AppState.emit('cart_changed')
             except Exception:
                 pass
-            
+
             # Show success indicator
             AppState.show_success()
-            show_snackbar(e, f"Order #{order_id} created successfully!")
+            show_success(e.page, ORDER_PLACED.format(order_id))
             refresh_cart(e)
-            
+
             # go to orders page
             e.page.go("/patient/orders")
-            
+
         except Exception as ex:
             conn.rollback()
-            show_snackbar(e, f"Checkout failed: {str(ex)}", error=True)
+            show_error(e.page, f"{OPERATION_FAILED}: {str(ex)}")
         finally:
             conn.close()
     

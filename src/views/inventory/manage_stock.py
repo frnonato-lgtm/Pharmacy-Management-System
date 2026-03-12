@@ -1,6 +1,7 @@
 import flet as ft
 from services.database import get_db_connection
 from datetime import datetime
+from utils.notifications import show_success, show_error, show_warning, show_info, CREATE_SUCCESS, UPDATE_SUCCESS, DELETE_SUCCESS, REQUIRED_FIELDS, LOW_STOCK, OUT_OF_STOCK
 
 def ManageStock():
     """Page to Add, Update, Delete, and Search Medicines."""
@@ -125,18 +126,18 @@ def ManageStock():
         """Connects to DB and fills the table."""
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         query = "SELECT * FROM medicines WHERE 1=1"
         params = []
 
         if search_txt.value:
             query += " AND name LIKE ?"
             params.append(f"%{search_txt.value}%")
-        
+
         if category_filter.value != "All":
             query += " AND category = ?"
             params.append(category_filter.value)
-            
+
         if stock_filter.value == "Low Stock":
             query += " AND stock > 0 AND stock < 10"
         elif stock_filter.value == "Out of Stock":
@@ -151,11 +152,19 @@ def ManageStock():
         conn.close()
 
         stock_table.rows.clear()
-        
+
+        low_stock_meds = []
+        out_of_stock_meds = []
+
         for m in meds:
-            if m['stock'] == 0: stock_color = "error" 
-            elif m['stock'] < 10: stock_color = "orange"
-            else: stock_color = "primary"
+            if m['stock'] == 0:
+                stock_color = "error"
+                out_of_stock_meds.append(m['name'])
+            elif m['stock'] < 10:
+                stock_color = "orange"
+                low_stock_meds.append((m['name'], m['stock']))
+            else:
+                stock_color = "primary"
 
             stock_table.rows.append(
                 ft.DataRow(cells=[
@@ -168,21 +177,21 @@ def ManageStock():
                     ft.DataCell(ft.Text(m['supplier'] or "N/A")),
                     ft.DataCell(ft.Row([
                         ft.IconButton(
-                            icon=ft.Icons.EDIT, 
-                            icon_color="primary", 
+                            icon=ft.Icons.EDIT,
+                            icon_color="primary",
                             tooltip="Edit",
                             on_click=lambda e, med=m: open_edit_dialog(e, med)
                         ),
                         ft.IconButton(
-                            icon=ft.Icons.DELETE, 
-                            icon_color="error", 
+                            icon=ft.Icons.DELETE,
+                            icon_color="error",
                             tooltip="Delete",
                             on_click=lambda e, mid=m['id']: prompt_delete(e, mid)
                         ),
                     ])),
                 ])
             )
-        
+
         if stock_table.page:
             stock_table.update()
 
@@ -218,8 +227,7 @@ def ManageStock():
 
     def save_medicine(e):
         if not name_input.value or not price_input.value or not stock_input.value:
-            e.page.snack_bar = ft.SnackBar(ft.Text("Please fill in Name, Price, and Stock!"), bgcolor="error")
-            e.page.snack_bar.open = True
+            show_error(e.page, REQUIRED_FIELDS)
             e.page.update()
             return
 
@@ -229,37 +237,36 @@ def ManageStock():
 
             if selected_medicine_id is None:
                 cursor.execute("""
-                    INSERT INTO medicines (name, category, price, stock, expiry_date, supplier) 
+                    INSERT INTO medicines (name, category, price, stock, expiry_date, supplier)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (
-                    name_input.value, category_input.value, float(price_input.value), 
+                    name_input.value, category_input.value, float(price_input.value),
                     int(stock_input.value), expiry_input.value, supplier_input.value
                 ))
-                msg = "Medicine Added Successfully!"
+                msg = CREATE_SUCCESS.format(name_input.value)
             else:
                 cursor.execute("""
-                    UPDATE medicines 
+                    UPDATE medicines
                     SET name=?, category=?, price=?, stock=?, expiry_date=?, supplier=?
                     WHERE id=?
                 """, (
-                    name_input.value, category_input.value, float(price_input.value), 
+                    name_input.value, category_input.value, float(price_input.value),
                     int(stock_input.value), expiry_input.value, supplier_input.value,
                     selected_medicine_id
                 ))
-                msg = "Medicine Updated Successfully!"
+                msg = UPDATE_SUCCESS.format(name_input.value)
 
             conn.commit()
             conn.close()
-            
+
             e.page.close(dialog)
             load_data()
-            e.page.snack_bar = ft.SnackBar(ft.Text(msg), bgcolor="green")
-            e.page.snack_bar.open = True
+            show_success(e.page, msg)
             e.page.update()
 
         except Exception as ex:
-            e.page.snack_bar = ft.SnackBar(ft.Text(f"Error: {str(ex)}"), bgcolor="error")
-            e.page.snack_bar.open = True
+            print(f"Error: {str(ex)}")
+            show_error(e.page, f"Error: {str(ex)}")
             e.page.update()
 
     def prompt_delete(e, med_id):
@@ -275,8 +282,7 @@ def ManageStock():
         conn.close()
         e.page.close(del_dialog)
         load_data()
-        e.page.snack_bar = ft.SnackBar(ft.Text("Medicine Deleted!"), bgcolor="error")
-        e.page.snack_bar.open = True
+        show_success(e.page, DELETE_SUCCESS.format("Medicine"))
         e.page.update()
 
     # --- DEFINE DIALOGS ---

@@ -3,6 +3,7 @@
 import flet as ft
 from services.database import get_db_connection
 from datetime import datetime, timedelta
+from utils.notifications import show_success, show_error
 
 def ReportsView():
     """Reports interface with real database statistics."""
@@ -771,7 +772,7 @@ def ReportsView():
         # Clear controls completely first
         report_output.controls.clear()
         e.page.update()
-        
+
         # Dictionary mapping values to functions
         report_generators = {
             "user_activity": generate_user_activity_report,
@@ -781,7 +782,7 @@ def ReportsView():
             "system_usage": generate_system_usage_report,
             "orders_summary": generate_orders_summary,
         }
-        
+
         generator = report_generators.get(report_type.value)
         if generator:
             try:
@@ -791,6 +792,7 @@ def ReportsView():
                 report_output.controls.clear()
                 for ctrl in report_controls:
                     report_output.controls.append(ctrl)
+                show_success(e.page, f"Report generated successfully!")
             except Exception as ex:
                 report_output.controls = [
                     ft.Container(
@@ -801,7 +803,8 @@ def ReportsView():
                         padding=20,
                     )
                 ]
-        
+                show_error(e.page, f"Failed to generate report")
+
         e.page.update()
     
     # --- PAGE LAYOUT ---
