@@ -50,7 +50,7 @@ def LandingPage(page: ft.Page):
                             ft.Text("PharmaOps", size=36, weight="bold", color="onPrimaryContainer", text_align="center"),
                             # Fixed color visibility
                             ft.Text("Pharmacy Management System", size=18, color="onPrimaryContainer", weight="w500", text_align="center"),
-                            ft.Text("Today Health is Caring • For Future Start With Your Health", size=12, italic=True, color="onPrimaryContainer", text_align="center"),
+                            ft.Text("Efficient Pharmacy Management for Better Healthcare.", size=12, italic=True, color="onPrimaryContainer", text_align="center"),
                         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
                     ),
                     # Theme button
