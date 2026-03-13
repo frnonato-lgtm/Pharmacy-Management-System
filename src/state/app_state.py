@@ -49,7 +49,7 @@ class AppState:
                 AppState._listeners[event_name].remove(callback)
     
     @staticmethod
-    def show_toast(page, message, type="success", duration=3):
+    def show_toast(page, message, type="success", duration=0.8):
         """Show a toast notification using AlertDialog.
 
         Args:
@@ -75,6 +75,10 @@ class AppState:
         dialog = ft.AlertDialog(
             modal=False,
             title=None,
+            bgcolor="transparent",
+            surface_tint_color="transparent",
+            shadow_color="transparent",
+            inset_padding=0,
             content=ft.Container(
                 content=ft.Row([
                     ft.Icon(icons.get(type, ft.Icons.INFO), color="white", size=20),

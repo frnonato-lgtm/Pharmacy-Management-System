@@ -46,7 +46,7 @@ def BillingDashboard():
             SELECT i.id, i.invoice_number, i.total_amount, i.status, i.created_at, u.full_name as patient_name
             FROM invoices i
             LEFT JOIN users u ON i.patient_id = u.id
-            ORDER BY i.created_at DESC LIMIT 5
+            ORDER BY i.id ASC LIMIT 5
         """)
         recent_invoices = cursor.fetchall()
         

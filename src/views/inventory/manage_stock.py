@@ -37,7 +37,7 @@ def ManageStock():
         height=45,
         content_padding=10,
         border_color="primary", 
-        on_submit=lambda e: load_data() 
+        on_submit=lambda e: load_data(e) 
     )
     
     # Filters
@@ -60,7 +60,7 @@ def ManageStock():
         width=200,
         content_padding=10,
         border_color="primary",
-        on_change=lambda e: load_data() 
+        on_change=lambda e: load_data(e) 
     )
     
     stock_filter = ft.Dropdown(
@@ -75,7 +75,7 @@ def ManageStock():
         width=150,
         content_padding=10,
         border_color="primary",
-        on_change=lambda e: load_data()
+        on_change=lambda e: load_data(e)
     )
 
     # --- INPUT FIELDS FOR DIALOG ---
@@ -117,12 +117,13 @@ def ManageStock():
             ft.DataColumn(ft.Text("Supplier")),
             ft.DataColumn(ft.Text("Actions")),
         ],
-        rows=[]
+        rows=[],
+        expand=True
     )
 
     # --- APP LOGIC ---
 
-    def load_data():
+    def load_data(e=None):
         """Connects to DB and fills the table."""
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -155,6 +156,11 @@ def ManageStock():
 
         low_stock_meds = []
         out_of_stock_meds = []
+
+        if not meds and (search_txt.value or category_filter.value != "All" or stock_filter.value != "All"):
+            page = e.page if e else stock_table.page
+            if page:
+                show_info(page, "No medicine found matching your search criteria.")
 
         for m in meds:
             if m['stock'] == 0:
@@ -346,17 +352,20 @@ def ManageStock():
                 search_txt,
                 category_filter,
                 stock_filter,
-                ft.IconButton(icon=ft.Icons.SEARCH, icon_color="primary", on_click=lambda e: load_data())
-            ], spacing=10),
+                ft.IconButton(icon=ft.Icons.SEARCH, icon_color="primary", on_click=lambda e: load_data(e))
+            ], spacing=10, expand=True),
             padding=15,
             bgcolor="surfaceVariant",
-            border_radius=10
+            border_radius=10,
+            expand=False
         ),
         
         ft.Container(height=20),
         
-        ft.Column([
-            ft.Row([stock_table], scroll=ft.ScrollMode.AUTO)
-        ], scroll=ft.ScrollMode.AUTO, expand=True),
+        ft.Container(
+            content=ft.Row([stock_table], expand=True, scroll=ft.ScrollMode.AUTO),
+            padding=0,
+            expand=True
+        ),
         
     ], scroll=ft.ScrollMode.AUTO, expand=True)

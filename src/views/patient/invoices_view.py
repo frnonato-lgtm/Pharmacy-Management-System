@@ -18,7 +18,7 @@ def PatientInvoicesView():
                status, payment_method, created_at, notes
         FROM invoices 
         WHERE patient_id = ? 
-        ORDER BY created_at DESC
+        ORDER BY id ASC
     """, (user['id'],))
     invoices = cursor.fetchall()
     conn.close()

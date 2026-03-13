@@ -195,9 +195,30 @@ class AppLayout(ft.Row):
             label = label.split(" (")[0]
 
         if label == "Logout":
-            AppState.set_user(None)
-            show_success(self.page, LOGOUT_SUCCESS, duration=2)
-            self.page.go("/") 
+            def confirm_logout_dialog(dialog_e):
+                AppState.set_user(None)
+                show_success(dialog_e.page, LOGOUT_SUCCESS, duration=2)
+                dialog_e.page.go("/")
+            
+            # Show confirmation dialog
+            confirm_dialog = ft.AlertDialog(
+                modal=True,
+                title=ft.Row([
+                    ft.Icon(ft.Icons.LOGOUT, color="error"),
+                    ft.Text("Confirm Logout")
+                ]),
+                content=ft.Text("Are you sure you want to logout?", size=14),
+                actions=[
+                    ft.TextButton("Cancel", on_click=lambda x: self.page.close(confirm_dialog)),
+                    ft.ElevatedButton(
+                        "Logout",
+                        bgcolor="error",
+                        color="white",
+                        on_click=confirm_logout_dialog
+                    ),
+                ],
+            )
+            self.page.open(confirm_dialog) 
         elif label == "Dashboard": self.page.go("/dashboard")
         # Patient links
         elif label == "Search Meds": self.page.go("/patient/search")

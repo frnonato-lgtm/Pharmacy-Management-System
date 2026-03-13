@@ -25,7 +25,7 @@ def CreateInvoicesView():
         FROM orders o
         LEFT JOIN users u ON o.patient_id = u.id
         WHERE o.payment_status = 'Unpaid'
-        ORDER BY o.order_date DESC
+        ORDER BY o.id ASC
     """)
     orders = cursor.fetchall()
     

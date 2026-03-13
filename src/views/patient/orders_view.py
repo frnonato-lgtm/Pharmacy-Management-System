@@ -52,7 +52,7 @@ def OrdersView():
         elif filter_status == "Completed":
             sql += " AND o.status = 'Completed'"
             
-        sql += " GROUP BY o.id ORDER BY o.order_date DESC"
+        sql += " GROUP BY o.id ORDER BY o.id ASC"
         
         cursor.execute(sql, (user_id,))
         orders = cursor.fetchall()

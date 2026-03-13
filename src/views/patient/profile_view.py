@@ -51,7 +51,7 @@ def ProfileView():
     
     # --- EDIT PROFILE LOGIC ---
     def edit_profile(e):
-        print("Edit profile clicked")
+        #print("Edit profile clicked")
         
         # Helper for consistent inputs inside dialog
         def create_input(label, val, icon, multiline=False):
@@ -223,9 +223,30 @@ def ProfileView():
     
     # Navigation Helpers
     def logout(e):
-        show_success(e.page, "Logged out successfully!", duration=2)
-        AppState.set_user(None)
-        e.page.go("/")
+        def confirm_logout(dialog_e):
+            show_success(dialog_e.page, "Logged out successfully!", duration=2)
+            AppState.set_user(None)
+            dialog_e.page.go("/")
+        
+        # Confirmation Dialog
+        confirm_dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([
+                ft.Icon(ft.Icons.LOGOUT, color="error"),
+                ft.Text("Confirm Logout")
+            ]),
+            content=ft.Text("Are you sure you want to logout?", size=14),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda x: e.page.close(confirm_dialog)),
+                ft.ElevatedButton(
+                    "Logout",
+                    bgcolor="error",
+                    color="white",
+                    on_click=confirm_logout
+                ),
+            ],
+        )
+        e.page.open(confirm_dialog)
         
     def view_medical_records(e):
         e.page.go("/patient/prescriptions")
