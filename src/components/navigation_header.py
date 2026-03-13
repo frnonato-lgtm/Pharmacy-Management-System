@@ -14,7 +14,7 @@ def NavigationHeader(title, subtitle="", show_back=True, show_forward=False, bac
         if back_route:
             e.page.go(back_route)
         else:
-            # Go back to dashboard as fallback
+            # Default system fallback logic
             e.page.go("/dashboard")
     
     def go_forward(e):
@@ -23,7 +23,7 @@ def NavigationHeader(title, subtitle="", show_back=True, show_forward=False, bac
     
     controls = []
     
-    # Back button
+    # Render traversal return component
     if show_back:
         controls.append(
             ft.IconButton(
@@ -35,7 +35,7 @@ def NavigationHeader(title, subtitle="", show_back=True, show_forward=False, bac
             )
         )
     
-    # Title section
+    # Render contextual hierarchy
     controls.append(
         ft.Column([
             ft.Text(title, size=28, weight="bold"),
@@ -43,7 +43,7 @@ def NavigationHeader(title, subtitle="", show_back=True, show_forward=False, bac
         ], spacing=5, expand=True)
     )
     
-    # Forward button
+    # Render traversal advance component
     if show_forward:
         controls.append(
             ft.IconButton(

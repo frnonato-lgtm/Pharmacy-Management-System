@@ -1,4 +1,4 @@
-# A simple class to remember who is currently logged in
+# Manages global application state and user sessions
 import flet as ft
 
 class AppState:

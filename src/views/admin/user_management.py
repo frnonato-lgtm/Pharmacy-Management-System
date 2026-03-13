@@ -32,6 +32,19 @@ def UserManagement():
         width=200,
         border_color="primary", 
     )
+
+    status_filter = ft.Dropdown(
+        label="Filter by Status",
+        options=[
+            ft.dropdown.Option("All"),
+            ft.dropdown.Option("Pending"),
+            ft.dropdown.Option("Approved"),
+            ft.dropdown.Option("Rejected"),
+        ],
+        value="All",
+        width=200,
+        border_color="primary",
+    )
     
     def load_users(e=None):
         try:
@@ -41,17 +54,12 @@ def UserManagement():
             conn = get_db_connection()
             cursor = conn.cursor()
 
-            # --- NEW LOGIC: Count total users per role ---
-            # We need this to know if a user is the "last one standing" in their role
+            # Calculate user distribution per role to enforce minimum role constraints
             cursor.execute("SELECT role, COUNT(*) FROM users GROUP BY role")
             counts_result = cursor.fetchall()
-
-            # Convert list of tuples to a dictionary: {'Admin': 1, 'Pharmacist': 3}
-            # This makes it easy to look up "How many Admins are there?"
             role_counts = {row[0]: row[1] for row in counts_result}
-            # ---------------------------------------------
 
-            # Normal logic to fetch users for the list
+            # Fetch filtered user records
             sql = "SELECT * FROM users WHERE 1=1"
             params = []
 
@@ -63,7 +71,12 @@ def UserManagement():
                 sql += " AND role = ?"
                 params.append(role)
 
-            sql += " ORDER BY created_at DESC"
+            status = status_filter.value
+            if status != "All":
+                sql += " AND status = ?"
+                params.append(status)
+
+            sql += " ORDER BY CASE WHEN status = 'Pending' THEN 0 ELSE 1 END, created_at DESC"
 
             cursor.execute(sql, params)
             users = cursor.fetchall()
@@ -72,15 +85,16 @@ def UserManagement():
             users_container.controls.clear()
 
             if users:
-                # Table Header
+                # Render DataGrid Header
                 users_container.controls.append(
                     ft.Container(
                         content=ft.Row([
                             ft.Text("Username", size=13, weight="bold", expand=1),
                             ft.Text("Full Name", size=13, weight="bold", expand=2),
                             ft.Text("Role", size=13, weight="bold", expand=1),
+                            ft.Text("Status", size=13, weight="bold", expand=1),
                             ft.Text("Email", size=13, weight="bold", expand=2),
-                            ft.Text("Actions", size=13, weight="bold", expand=1),
+                            ft.Text("Actions", size=13, weight="bold", expand=2),
                         ]),
                         bgcolor="surfaceVariant",
                         padding=15,
@@ -88,21 +102,18 @@ def UserManagement():
                     )
                 )
 
-                # Create rows
+                # Render DataGrid Rows
                 for user in users:
-                    # check how many people have this user's role
+                    # Verify minimum role requirement constraint
                     user_role = user['role']
                     total_in_role = role_counts.get(user_role, 0)
-
-                    # If count is 1 (or somehow less), they are the last one.
-                    # We pass 'True' if they are the last one.
                     is_last_user = (total_in_role <= 1)
 
                     users_container.controls.append(
                         create_user_row(user, load_users, is_last_user)
                     )
                 if e:
-                    pass  # Don't show info toast during internal refresh
+                    pass  # Suppress notifications during internal refresh
             else:
                 users_container.controls.append(
                     ft.Container(
@@ -118,12 +129,10 @@ def UserManagement():
                 e.page.update()
 
         except Exception as ex:
-            print(f"Error loading users: {ex}")
             if e:
                 show_error(e.page, "Error loading users.")
     
-    # Helper to create a row. 
-    # Added 'is_delete_disabled' parameter
+    # UI Component: DataGrid Row
     def create_user_row(user, refresh_callback, is_delete_disabled):
         
         def delete_user(e):
@@ -140,7 +149,6 @@ def UserManagement():
                     dialog_e.page.update()
                     refresh_callback(dialog_e)
                 except Exception as ex:
-                    print(f"Delete error: {ex}")
                     show_error(dialog_e.page, "Failed to delete user.")
 
             dialog = ft.AlertDialog(
@@ -188,6 +196,15 @@ def UserManagement():
                     conn = get_db_connection()
                     cursor = conn.cursor()
 
+                    # Validate email uniqueness
+                    if email_field.value and email_field.value != user['email']:
+                        cursor.execute("SELECT id FROM users WHERE email = ? AND id != ?", (email_field.value, user['id']))
+                        if cursor.fetchone():
+                            conn.close()
+                            show_error(dialog_e.page, "This email is already used by another account!")
+                            dialog_e.page.update()
+                            return
+
                     if password_field.value:
                         cursor.execute("""
                             UPDATE users
@@ -211,7 +228,6 @@ def UserManagement():
                     dialog_e.page.update()
                     refresh_callback(dialog_e)
                 except Exception as ex:
-                    print(f"Save error: {ex}")
                     show_error(dialog_e.page, "Failed to update user.")
 
             edit_dialog = ft.AlertDialog(
@@ -239,6 +255,68 @@ def UserManagement():
             
             e.page.open(edit_dialog)
         
+        user_status = dict(user).get('status', 'Approved')
+        status_colors = {'Pending': '#FFA000', 'Approved': '#4CAF50', 'Rejected': '#F44336'}
+        status_color = status_colors.get(user_status, '#9E9E9E')
+
+        def approve_user(e):
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE users SET status = 'Approved' WHERE id = ?", (user['id'],))
+                conn.commit()
+                conn.close()
+                show_success(e.page, f"User '{user['username']}' has been approved!")
+                refresh_callback(e)
+            except Exception as ex:
+                show_error(e.page, "Failed to approve user.")
+
+        def reject_user(e):
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE users SET status = 'Rejected' WHERE id = ?", (user['id'],))
+                conn.commit()
+                conn.close()
+                show_error(e.page, f"User '{user['username']}' has been rejected.")
+                refresh_callback(e)
+            except Exception as ex:
+                show_error(e.page, "Failed to reject user.")
+
+        # Configure record action controls
+        action_buttons = [
+            ft.IconButton(
+                icon=ft.Icons.EDIT,
+                icon_color="primary",
+                tooltip="Edit User",
+                on_click=edit_user,
+            ),
+        ]
+
+        if user_status == 'Pending':
+            action_buttons.insert(0, ft.IconButton(
+                icon=ft.Icons.CHECK_CIRCLE,
+                icon_color="#4CAF50",
+                tooltip="Approve User",
+                on_click=approve_user,
+            ))
+            action_buttons.insert(1, ft.IconButton(
+                icon=ft.Icons.CANCEL,
+                icon_color="#F44336",
+                tooltip="Reject User",
+                on_click=reject_user,
+            ))
+
+        action_buttons.append(
+            ft.IconButton(
+                icon=ft.Icons.DELETE,
+                icon_color="grey" if is_delete_disabled else "error",
+                disabled=is_delete_disabled,
+                tooltip="Cannot delete the last user of this role" if is_delete_disabled else "Delete User",
+                on_click=delete_user,
+            )
+        )
+
         return ft.Container(
             content=ft.Row([
                 ft.Text(user['username'], size=13, expand=1),
@@ -250,26 +328,15 @@ def UserManagement():
                     border_radius=5,
                     expand=1,
                 ),
+                ft.Container(
+                    content=ft.Text(user_status, size=11, weight="bold", color="white"),
+                    bgcolor=status_color,
+                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    border_radius=5,
+                    expand=1,
+                ),
                 ft.Text(user['email'] or "N/A", size=13, expand=2),
-                ft.Row([
-                    ft.IconButton(
-                        icon=ft.Icons.EDIT,
-                        icon_color="primary",
-                        tooltip="Edit User",
-                        on_click=edit_user,
-                    ),
-                    # The Delete Button
-                    ft.IconButton(
-                        icon=ft.Icons.DELETE,
-                        # If disabled, turn it grey, else red
-                        icon_color="grey" if is_delete_disabled else "error",
-                        # Disable the click if they are the last user
-                        disabled=is_delete_disabled,
-                        # Show a helpful hint if they can't delete
-                        tooltip="Cannot delete the last user of this role" if is_delete_disabled else "Delete User",
-                        on_click=delete_user,
-                    ),
-                ], spacing=5, expand=1),
+                ft.Row(action_buttons, spacing=2, expand=2),
             ]),
             padding=15,
             border=ft.border.all(1, "outlineVariant"),
@@ -316,6 +383,14 @@ def UserManagement():
                     dialog_e.page.update()
                     return
 
+                if email_field.value:
+                    cursor.execute("SELECT id FROM users WHERE email = ?", (email_field.value,))
+                    if cursor.fetchone():
+                        conn.close()
+                        show_error(dialog_e.page, "An account with this email already exists!")
+                        dialog_e.page.update()
+                        return
+
                 cursor.execute("""
                     INSERT INTO users (username, password, role, full_name, last_name, email, phone, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -331,7 +406,6 @@ def UserManagement():
                 dialog_e.page.update()
                 load_users(dialog_e)
             except Exception as ex:
-                print(f"Save new user error: {ex}")
                 show_error(dialog_e.page, "Failed to create user.")
         
         add_dialog = ft.AlertDialog(
@@ -387,6 +461,17 @@ def UserManagement():
                 on_click=add_user,
             ),
         ], spacing=10, wrap=True),
+
+        ft.Row([
+            status_filter,
+            ft.ElevatedButton(
+                "Apply Filters",
+                icon=ft.Icons.FILTER_LIST,
+                bgcolor="primary",
+                color="white",
+                on_click=load_users,
+            ),
+        ], spacing=10),
         
         ft.Container(height=20),
         

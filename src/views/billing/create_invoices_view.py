@@ -13,7 +13,7 @@ def CreateInvoicesView():
     
     user = AppState.get_user()
     
-    # --- FETCH DATA ---
+    # Query prerequisite data
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -31,7 +31,7 @@ def CreateInvoicesView():
     
     conn.close()
     
-    # --- FORM FIELDS ---
+    # Initialize input components
     patient_dropdown = ft.Dropdown(
         label="Select Patient *",
         options=[ft.dropdown.Option(key=str(p[0]), text=f"{p[1]} ({p[2]})") for p in patients],
@@ -65,7 +65,7 @@ def CreateInvoicesView():
     
     notes_field = ft.TextField(label="Notes (Optional)", multiline=True, min_lines=3, max_lines=5, width=700, border_color="outline")
     
-    # --- CALCULATIONS ---
+    # Financial computations
     def calculate_total(e):
         try:
             subtotal = float(subtotal_field.value or 0)
@@ -91,7 +91,7 @@ def CreateInvoicesView():
     
     order_dropdown.on_change = on_order_selected
     
-    # --- CREATE LOGIC ---
+    # Invoice generation handler
     def create_invoice(e):
         if not patient_dropdown.value:
             show_error(e.page, REQUIRED_FIELDS)
@@ -140,7 +140,7 @@ def CreateInvoicesView():
             show_error(e.page, f"Error creating invoice: {str(ex)}")
             e.page.update()
     
-    # --- PAGE LAYOUT ---
+    # Render primary structure
     return ft.Column([
         NavigationHeader(
             "Create Invoice",
@@ -188,7 +188,7 @@ def CreateInvoicesView():
                     ft.OutlinedButton(
                         "Cancel",
                         icon=ft.Icons.CANCEL,
-                        # FIX: Redirects to Dashboard now
+                        # Navigation fallback
                         on_click=lambda e: e.page.go("/dashboard"),
                         style=ft.ButtonStyle(padding=15, shape=ft.RoundedRectangleBorder(radius=8)),
                     ),

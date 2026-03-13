@@ -12,7 +12,7 @@ def BillingDashboard():
     user = AppState.get_user()
     user_name = user['full_name'] if user else "Billing Clerk"
     
-    # Initialize defaults
+    # Initialize default metric values
     pending_invoices = 0
     paid_today = 0
     revenue_today = 0.0
@@ -20,28 +20,28 @@ def BillingDashboard():
     recent_invoices = []
     recent_activities = []
 
-    # --- FETCH STATS ---
+    # Data Retrieval and Aggregation
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 1. Pending Invoices Count
+        # Query pending invoice totals
         cursor.execute("SELECT COUNT(*) FROM invoices WHERE status = 'Unpaid'")
         pending_invoices = cursor.fetchone()[0] or 0
         
-        # 2. Paid Today Count
+        # Query daily completed transactions count
         cursor.execute("SELECT COUNT(*) FROM invoices WHERE status = 'Paid' AND DATE(payment_date) = DATE('now')")
         paid_today = cursor.fetchone()[0] or 0
         
-        # 3. Revenue Today
+        # Query daily realized revenue
         cursor.execute("SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'Paid' AND DATE(payment_date) = DATE('now')")
         revenue_today = cursor.fetchone()[0] or 0.0
         
-        # 4. Total Pending Amount
+        # Query total outstanding receivables
         cursor.execute("SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'Unpaid'")
         pending_amount = cursor.fetchone()[0] or 0.0
         
-        # 5. Recent Invoices List
+        # Query recent invoice records
         cursor.execute("""
             SELECT i.id, i.invoice_number, i.total_amount, i.status, i.created_at, u.full_name as patient_name
             FROM invoices i
@@ -50,7 +50,7 @@ def BillingDashboard():
         """)
         recent_invoices = cursor.fetchall()
         
-        # 6. Recent Activity List
+        # Query recent user activity
         try:
             cursor.execute("""
                 SELECT action, details, timestamp FROM activity_log
@@ -62,11 +62,11 @@ def BillingDashboard():
         
         conn.close()
     except Exception as e:
-        print(f"Dashboard Error: {e}")
+        pass
     
-    # --- UI HELPERS ---
+    # UI Component Definitions
     
-    # Fixed height stat card
+    # UI Component: Statistics Card (Fixed Dimension)
     def create_stat_card(title, value, icon, color, subtitle="", is_currency=False):
         display_value = f"₱{value:,.2f}" if is_currency else str(value)
         return ft.Container(
@@ -81,7 +81,7 @@ def BillingDashboard():
                             weight="bold",
                             color=color,
                         ),
-                        # Spacer keeps cards even if subtitle missing
+                        # Vertical alignment spacer
                         ft.Text(subtitle, size=11, color="outline") if subtitle else ft.Container(height=16),
                     ], spacing=2, expand=True),
                 ], spacing=15),
@@ -91,7 +91,7 @@ def BillingDashboard():
             border_radius=10,
             border=ft.border.all(1, "outlineVariant"),
             expand=True,
-            height=140, # FIXED HEIGHT applied here
+            height=140, # Apply constrained height
         )
     
     def create_action_button(text, icon, route, color):
@@ -144,7 +144,7 @@ def BillingDashboard():
         icon = action_icons.get(action, '•')
         return ft.Text(f"{icon} {details}", size=12, color="outline")
     
-    # Generate list widgets
+    # Render dynamic lists
     invoice_widgets = [create_invoice_item(inv) for inv in recent_invoices] if recent_invoices else [ft.Container(content=ft.Text("No recent invoices", color="outline"), padding=20)]
     activity_widgets = [create_activity_item(a[0], a[1], a[2]) for a in recent_activities] if recent_activities else [ft.Text("No recent activity", color="outline")]
     

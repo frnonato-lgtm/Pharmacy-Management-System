@@ -11,7 +11,7 @@ def AllPatientsView():
     patients_container = ft.Column(spacing=10)
     
     # Filter controls
-    # Added border_color="primary" so it's visible in Dark Mode
+    # Configure visibility for dark mode
     sort_dropdown = ft.Dropdown(
         label="Sort By",
         options=[
@@ -25,7 +25,7 @@ def AllPatientsView():
     )
     
     # Quick filter
-    # Added border_color="primary" for visibility
+    # Configure visibility for dark mode
     search_field = ft.TextField(
         hint_text="Quick filter by name...",
         prefix_icon=ft.Icons.FILTER_LIST,
@@ -33,7 +33,7 @@ def AllPatientsView():
         border_color="primary",
     )
     
-    # --- ROW CREATOR ---
+    # Row Element Builder
     def create_patient_row(patient, index):
         return ft.Container(
             content=ft.Row([
@@ -64,7 +64,7 @@ def AllPatientsView():
                     icon=ft.Icons.VISIBILITY,
                     tooltip="View Details",
                     icon_color="primary",
-                    # PASS '/all' AT THE END SO IT KNOWS TO COME BACK HERE
+                    # Append '/all' to origin route for state recovery
                     on_click=lambda e, pid=patient['id']: e.page.go(f"/staff/patient/{pid}/all")
                 )
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
@@ -75,7 +75,7 @@ def AllPatientsView():
             border=ft.border.all(1, "outlineVariant"),
         )
     
-    # --- LOAD DATA ---
+    # Data Retrieval and Processing
     def load_patients(e=None):
         patients_container.controls.clear()
 
@@ -121,12 +121,12 @@ def AllPatientsView():
 
         if e: e.page.update()
         
-    # Initial load hack
+    # Initialize component state
     class Dummy: 
         page = None
     load_patients(None)
     
-    # --- PAGE LAYOUT ---
+    # Interface Layout Configuration
     return ft.Column([
         NavigationHeader("All Patients", "Full directory of registered patients", show_back=False),
         
@@ -137,7 +137,7 @@ def AllPatientsView():
                 ft.Row([
                     search_field,
                     sort_dropdown,
-                    # Swapped refresh button for the Apply Filter button
+                    # Implement explicit filtering action
                     ft.ElevatedButton(
                         "Apply Filter", 
                         on_click=load_patients, 
@@ -156,7 +156,7 @@ def AllPatientsView():
     ], 
     scroll=ft.ScrollMode.AUTO, 
     spacing=0,
-    # THIS FIXES THE GAP AT THE TOP
+    # Ensure element alignment begins from top
     alignment=ft.MainAxisAlignment.START,
     expand=True
     )

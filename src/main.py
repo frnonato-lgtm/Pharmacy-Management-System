@@ -1,14 +1,14 @@
 import flet as ft
 from services.database import init_db
+from services.google_auth import start_callback_server
 from state.app_state import AppState
 import ctypes
 
-# Import Main Views
+# Core Layout Components
 from views.landing_page import LandingPage
-from views.login_page import LoginPage
 from components.app_layout import AppLayout
 
-# Import Role-Specific Views
+# Role-Based Views
 from views.patient.patient_dashboard import PatientDashboard
 from views.patient.medicine_search import MedicineSearch
 from views.patient.cart_view import CartView
@@ -45,46 +45,37 @@ from views.staff.all_patients import AllPatientsView
 from views.staff.help_desk import HelpDeskView
 def main(page: ft.Page):
     page.title = "PharmaOps PMS"
-    page.window_width = 1280
-    page.window_height = 720
-    page.window_resizable = True 
     
-    # Center the app (Still not working)
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    try: page.window_center()
-    except: pass 
+    try:
+        page.window.width = 1280
+        page.window.height = 720
+        page.window.resizable = True 
+        page.window.center()
+    except:
+        pass
     
     page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
+    page.theme_mode = ft.ThemeMode.LIGHT
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.vertical_alignment = ft.MainAxisAlignment.CENTER 
-    
-    page.theme = ft.Theme(color_scheme_seed=ft.Colors.TEAL)
-    page.theme_mode = ft.ThemeMode.LIGHT 
 
-    # Start the DB
+    # Initialize database
     init_db()
 
     def route_change(route):
         page.views.clear()
         
-        # Helper to simplify view creation
+        # Helper for view creation
         def create_view(route_path, controls, scroll_mode=ft.ScrollMode.AUTO):
             return ft.View(route_path, controls, padding=0, scroll=scroll_mode)
 
         troute = page.route
 
-        # Landing
+        # Public Landing Route
         if troute == "/":
-            page.views.append(create_view("/", [LandingPage(page)], ft.ScrollMode.AUTO))
-        
-        # Logins
-        elif troute.startswith("/login"):
-            try: role_param = troute.split("/")[2]
-            except: role_param = "Patient"
-            page.views.append(create_view(troute, [LoginPage(page, role_param)], ft.ScrollMode.AUTO))
+            page.views.append(create_view("/", [ft.Container(content=LandingPage(page), expand=True)], None))
 
-        # Dashboard / Protected Routes
+        # Authenticated Routes
         else:
             user = AppState.get_user()
             if not user:
@@ -93,7 +84,7 @@ def main(page: ft.Page):
 
             content = ft.Text("Not Found")
             
-            # 1. Dashboards
+            # Role-Specific Dashboards
             if troute == "/dashboard":
                 role = user['role']
                 if role == "Patient": content = PatientDashboard()
@@ -104,7 +95,7 @@ def main(page: ft.Page):
                 elif role == "Staff": content = StaffDashboard()
                 else: content = ft.Text(f"Welcome {user['full_name']}")
 
-            # 2. Patient Views
+            # Patient Component Routes
             elif troute == "/patient/search": content = MedicineSearch()
             elif troute == "/patient/cart": content = CartView()
             elif troute == "/patient/orders": content = OrdersView()
@@ -120,7 +111,7 @@ def main(page: ft.Page):
                     page.go("/patient/invoices")
                     return
             
-            # 3. Pharmacist Views
+            # Pharmacist Component Routes
             elif troute == "/pharmacist/prescriptions": content = PharmacistPrescriptionsView()
             elif troute == "/pharmacist/reports": content = PharmacistReportsView() 
             elif troute == "/pharmacist/medicines": content = PharmacistMedicineSearch()
@@ -130,14 +121,14 @@ def main(page: ft.Page):
                     rx_id = int(rx_id)
                     content = PrescriptionDetailView(rx_id)
                 except (ValueError, IndexError):
-                    # Invalid prescription ID, redirect to list
+                    # Handle invalid prescription ID identifier
                     page.go("/pharmacist/prescriptions")
                     return
 
-            # 4. Inventory Views
+            # Inventory Component Routes
             elif troute == "/inventory/stock": content = ManageStock()
 
-            # 5. Billing Views
+            # Billing Component Routes
             elif troute == "/billing/create-invoice": content = CreateInvoicesView()
             elif troute == "/billing/invoices": content = InvoicesListView()
             elif troute == "/billing/payments": content = PaymentHistoryView()
@@ -151,32 +142,26 @@ def main(page: ft.Page):
                     page.go("/billing/invoices")
                     return
                     
-            # 6. Admin Views
+            # Administrator Component Routes
             elif troute == "/admin/users": content = UserManagement()
             elif troute == "/admin/reports": content = AdminReportsView()
             elif troute == "/admin/logs": content = SystemLogs()
 
-            # 7. Staff Views
+            # Staff Component Routes
             elif troute == "/staff/search": content = StaffPatientSearch()
             elif troute == "/staff/patients": content = AllPatientsView() 
             elif troute == "/staff/help": content = HelpDeskView()
             
-            # This detects the patient detail view
+            # Dynamic Patient Detail Routing
             elif troute.startswith("/staff/patient/"):
-                # Break down the URL: /staff/patient/ID/SOURCE
                 parts = troute.split("/")
                 
                 if len(parts) >= 4:
-                    patient_id = parts[3] # Grab the ID
-                    
-                    # Check if we passed a source (where we came from)
-                    source = "search" # Default to search
-                    if len(parts) > 4:
-                        source = parts[4] # e.g., 'all'
+                    patient_id = parts[3] 
+                    source = parts[4] if len(parts) > 4 else "search"
                     
                     content = StaffPatientDetail(patient_id, source)
                 else:
-                    # Fallback
                     page.go("/staff/search")
                     return
 
@@ -189,9 +174,12 @@ def main(page: ft.Page):
         top_view = page.views[-1]
         page.go(top_view.route)
 
+    # OAuth callback processing delegated to landing view
     page.on_route_change = route_change
     page.on_view_pop = view_pop
     page.go("/")
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    # Initialize OAuth callback listener
+    start_callback_server(port=8551)
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8550)

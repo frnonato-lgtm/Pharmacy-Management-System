@@ -8,31 +8,31 @@ from components.navigation_header import NavigationHeader
 def StaffDashboard():
     """Staff member dashboard with overview."""
     
-    # Get who is currently logged in so we can say "Welcome [Name]"
+    # Contextual user awareness
     user = AppState.get_user()
     user_name = user['full_name'] if user else "Staff Member"
     
-    # --- DATABASE STUFF ---
-    # We need to open a connection to get the numbers for the dashboard cards
+    # Metrics Aggregation
+    # Retrieve KPIs from database
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Count how many patients exist in total
+    # Aggregate patient total
     cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'Patient'")
     total_patients = cursor.fetchone()[0]
     
-    # 2. Count how many joined TODAY
+    # Retrieve current day new user metrics
     cursor.execute("""
         SELECT COUNT(*) FROM users 
         WHERE role = 'Patient' AND DATE(created_at) = DATE('now')
     """)
     new_today = cursor.fetchone()[0]
     
-    # 3. Count prescriptions that are waiting for the pharmacist
+    # Calculate pending prescription volume
     cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE status = 'Pending'")
     active_prescriptions = cursor.fetchone()[0]
     
-    # 4. Get the 5 newest patients to show in the "Recent" box
+    # Retrieve most recent user records
     cursor.execute("""
         SELECT id, full_name, phone, email, created_at
         FROM users
@@ -42,12 +42,12 @@ def StaffDashboard():
     """)
     recent_patients = cursor.fetchall()
     
-    # Always close the connection when done!
+    # Terminate DB Connection
     conn.close()
     
-    # --- UI HELPERS ---
+    # Interface Component Helpers
     
-    # This function makes those big colorful number cards at the top
+    # Metric card component factory
     def create_stat_card(title, value, icon, color):
         return ft.Container(
             content=ft.Column([
@@ -62,7 +62,7 @@ def StaffDashboard():
             expand=True, # This makes all 3 cards the same width
         )
     
-    # This makes the big wide buttons for "Quick Actions"
+    # Navigation action button generator
     def create_action_button(text, icon, route, color):
         return ft.ElevatedButton(
             content=ft.Row([
@@ -78,17 +78,17 @@ def StaffDashboard():
             width=1000, # Force it to stretch
         )
     
-    # Creates a row for the "Recent Patients" list
+    # List element factory for recent patients
     def create_patient_item(patient):
         return ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.PERSON, color="primary", size=24),
                 ft.Column([
                     ft.Text(patient[1], size=14, weight="bold"),
-                    # Show only the date part of the timestamp (first 10 chars)
+                    # Truncate timestamp to date format
                     ft.Text(f"Reg: {patient[4][:10]}", size=11, color="outline"),
                 ], spacing=2, expand=True),
-                # Arrow button to go to details
+                # Transition trigger to detailed view
                 ft.IconButton(
                     icon=ft.Icons.ARROW_FORWARD_IOS,
                     icon_size=16,
@@ -141,8 +141,7 @@ def StaffDashboard():
                                 content=ft.Column([
                                     ft.Text("Recent Registrations", size=16, weight="bold"),
                                     ft.Divider(),
-                                    # This is a cool python trick: It loops through patients and makes a widget for each.
-                                    # If list is empty, it shows a text message instead.
+                                    # Comprehension-based list rendering
                                     *([create_patient_item(p) for p in recent_patients] if recent_patients else [ft.Text("No new patients today", italic=True)]),
                                 ], spacing=10),
                                 padding=20,

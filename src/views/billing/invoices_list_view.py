@@ -12,7 +12,7 @@ def InvoicesListView():
     user = AppState.get_user()
     invoices_container = ft.Column(spacing=10)
     
-    # --- FILTERS ---
+    # Initialize filter components
     status_filter = ft.Dropdown(
         label="Status",
         options=[
@@ -64,7 +64,7 @@ def InvoicesListView():
         expand=True,
     )
     
-    # --- DB FUNCTION ---
+    # Query execution function
     def get_invoices_from_db(status="All", payment_method="All", date_start="", date_end="", search=""):
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -109,7 +109,7 @@ def InvoicesListView():
         
         return results
     
-    # --- CARD CREATOR ---
+    # Render comprehensive invoice card
     def create_invoice_card(inv):
         inv_id, inv_number, total, status, created_at, payment_method, payment_date, subtotal, tax, discount, patient_name, patient_id = inv
         
@@ -125,7 +125,7 @@ def InvoicesListView():
         
         return ft.Container(
             content=ft.Column([
-                # Header
+                # Detail view card header
                 ft.Row([
                     ft.Column([
                         ft.Row([
@@ -144,7 +144,7 @@ def InvoicesListView():
                 
                 ft.Divider(height=10),
                 
-                # Totals
+                # Financial aggregation metrics
                 ft.Row([
                     ft.Column([
                         ft.Text("Subtotal", size=11, color="outline"),
@@ -162,7 +162,7 @@ def InvoicesListView():
                 
                 ft.Container(height=5),
                 
-                # Payment Date info
+                # Meta transaction timestamps
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.CHECK_CIRCLE, size=14, color="primary"),
@@ -174,7 +174,7 @@ def InvoicesListView():
                     border_radius=5,
                 ),
                 
-                # Buttons
+                # Invoice operational buttons
                 ft.Row([
                     ft.ElevatedButton(
                         "View Details",
@@ -184,7 +184,7 @@ def InvoicesListView():
                         on_click=lambda e, inv_id=inv_id: view_invoice_detail(e, inv_id),
                     ),
                     
-                    # Mark as Paid
+                    # Update payment state
                     ft.OutlinedButton(
                         "Mark as Paid",
                         icon=ft.Icons.PAYMENT,
@@ -192,7 +192,7 @@ def InvoicesListView():
                         on_click=lambda e, inv_id=inv_id: mark_as_paid(e, inv_id),
                     ),
                     
-                    # Cancel Button
+                    # Update cancellation state
                     ft.TextButton(
                         "Cancel Invoice",
                         icon=ft.Icons.DELETE,
@@ -209,7 +209,7 @@ def InvoicesListView():
             bgcolor="surface",
         )
     
-    # --- HELPERS ---
+    # Helper callback functions
     def view_invoice_detail(e, inv_id):
         e.page.go(f"/billing/invoice/{inv_id}")
     
@@ -243,7 +243,7 @@ def InvoicesListView():
         
         load_invoices(e)
     
-    # --- LOAD INVOICES ---
+    # Populate invoice lists
     def load_invoices(e=None):
         invoices_container.controls.clear()
         
@@ -273,7 +273,7 @@ def InvoicesListView():
             for inv in invoices:
                 invoices_container.controls.append(create_invoice_card(inv))
         else:
-            # Centered empty state
+            # Display empty state
             invoices_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -286,14 +286,14 @@ def InvoicesListView():
                 )
             )
         
-        # Only update the page if an event 'e' exists
+        # Trigger isolated component updates
         if e: 
             e.page.update()
     
-    # FIX: Pass 'None' for initial load instead of a Fake class
+    # Inject arbitrary default for bootstrapping
     load_invoices(None)
     
-    # --- PAGE LAYOUT ---
+    # Render primary structure
     return ft.Column([
         NavigationHeader(
             "All Invoices",
@@ -303,7 +303,7 @@ def InvoicesListView():
         
         ft.Container(
             content=ft.Column([
-                # Create Button
+                # Initialize call to action
                 ft.Row([
                     ft.ElevatedButton(
                         "Create New Invoice",
@@ -316,7 +316,7 @@ def InvoicesListView():
                 
                 ft.Container(height=20),
                 
-                # Filters
+                # Form parameter constraints
                 ft.Text("Filter Invoices", size=20, weight="bold"),
                 
                 ft.Row([
@@ -326,7 +326,7 @@ def InvoicesListView():
                     date_to,
                 ], spacing=10, wrap=True),
                 
-                # Search Bar
+                # Global search lookup
                 ft.Row([
                     search_field,
                     ft.ElevatedButton(
@@ -340,7 +340,7 @@ def InvoicesListView():
                 
                 ft.Divider(height=30),
                 
-                # The List
+                # Render main list view
                 invoices_container,
             ], spacing=15),
             padding=20,

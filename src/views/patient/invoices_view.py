@@ -10,7 +10,7 @@ def PatientInvoicesView():
     
     user = AppState.get_user()
     
-    # Get patient's invoices
+    # Retrieve patient bills
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -55,7 +55,7 @@ def PatientInvoicesView():
                 
                 ft.Divider(height=15),
                 
-                # Amount breakdown
+                # Render financial breakdown
                 ft.Column([
                     ft.Row([
                         ft.Text("Subtotal:", size=13, color="outline", expand=True),
@@ -78,13 +78,13 @@ def PatientInvoicesView():
                 
                 ft.Divider(height=10),
                 
-                # Payment info
+                # Render transaction metadata
                 ft.Row([
                     ft.Icon(ft.Icons.PAYMENT, size=16, color="outline"),
                     ft.Text(f"Payment Method: {invoice['payment_method']}", size=12, color="outline"),
                 ], spacing=5),
                 
-                # Notes if any
+                # Render accessory notes
                 ft.Container(
                     content=ft.Column([
                         ft.Text("Notes:", size=12, weight="bold"),
@@ -95,7 +95,7 @@ def PatientInvoicesView():
                     border_radius=5,
                 ) if invoice['notes'] else ft.Container(),
                 
-                # Action buttons
+                # Render contextual actions
                 ft.Row([
                     ft.ElevatedButton(
                         "View Details",
@@ -121,7 +121,7 @@ def PatientInvoicesView():
     def pay_invoice(e, invoice_id):
         """Handle invoice payment with payment form dialog."""
         
-        # Get invoice details first
+        # Fetch target invoice
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
@@ -143,7 +143,7 @@ def PatientInvoicesView():
         
         invoice_number, total_amount, status = invoice_data
         
-        # Payment form fields
+        # Initialize payment form inputs
         payment_method = ft.Dropdown(
             label="Payment Method *",
             options=[
@@ -184,7 +184,7 @@ def PatientInvoicesView():
         
         def submit_payment(dialog_e):
             """Process the payment submission."""
-            # Validation
+            # Validate form requirements
             if not payment_method.value:
                 error_text.value = "Please select a payment method"
                 dialog_e.page.update()
@@ -205,22 +205,19 @@ def PatientInvoicesView():
                 error_text.value = "Please enter a valid amount"
                 dialog_e.page.update()
                 return
-            
-            # Determine new status
+                        # Compute updated payment status
             if amount >= total_amount:
                 new_status = "Paid"
             else:
                 new_status = "Partially Paid"
-            
-            # Build payment notes
+                        # Construct payment annotation
             notes_parts = []
             if reference_number.value:
                 notes_parts.append(f"Ref: {reference_number.value}")
             if payment_notes.value:
                 notes_parts.append(payment_notes.value)
             combined_notes = " | ".join(notes_parts) if notes_parts else None
-            
-            # Update database
+                        # Apply transaction records
             conn = get_db_connection()
             cursor = conn.cursor()
             
@@ -240,7 +237,7 @@ def PatientInvoicesView():
                     invoice_id
                 ))
                 
-                # Log the payment in activity log
+                # Record system action
                 cursor.execute("""
                     INSERT INTO activity_log (user_id, action, details, timestamp)
                     VALUES (?, ?, ?, ?)
@@ -254,10 +251,10 @@ def PatientInvoicesView():
                 conn.commit()
                 conn.close()
                 
-                # Close dialog
+                # Dismiss modal
                 dialog_e.page.close(payment_dialog)
                 
-                # Show success message
+                # Display confirmation
                 dialog_e.page.snack_bar = ft.SnackBar(
                     content=ft.Row([
                         ft.Icon(ft.Icons.CHECK_CIRCLE, color="white"),
@@ -268,7 +265,7 @@ def PatientInvoicesView():
                 )
                 dialog_e.page.snack_bar.open = True
                 
-                # Refresh the invoices page
+                # Reload invoices view
                 dialog_e.page.go("/patient/invoices")
                 
             except Exception as ex:
@@ -281,7 +278,7 @@ def PatientInvoicesView():
         def close_dialog(dialog_e):
             dialog_e.page.close(payment_dialog)
         
-        # Create payment dialog
+        # Render payment modal
         payment_dialog = ft.AlertDialog(
             modal=True,
             title=ft.Row([
@@ -347,111 +344,112 @@ def PatientInvoicesView():
         
         e.page.open(payment_dialog)
     
-    # Calculate totals
+    # Compute aggregate balances
     total_unpaid = sum(inv['total_amount'] for inv in invoices if inv['status'] == 'Unpaid')
     total_paid = sum(inv['total_amount'] for inv in invoices if inv['status'] == 'Paid')
     
+    # Primary layout
     return ft.Column([
-        # Header
-        ft.Row([
-            ft.Icon(ft.Icons.RECEIPT_LONG, color="primary", size=32),
-            ft.Column([
-                ft.Text("My Bills & Invoices", size=28, weight="bold"),
-                ft.Text("View and manage your medical bills", size=14, color="outline"),
-            ], spacing=5, expand=True),
-        ], spacing=15),
-        
-        ft.Container(height=20),
-        
-        # Summary cards
-        ft.Row([
-            ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Icon(ft.Icons.ERROR_OUTLINE, color="error", size=30),
-                        ft.Column([
-                            ft.Text("Unpaid Bills", size=12, color="outline"),
-                            ft.Text(f"₱{total_unpaid:,.2f}", size=20, weight="bold", color="error"),
-                        ], spacing=2, expand=True),
-                    ], spacing=10),
-                ]),
-                padding=15,
-                bgcolor="surface",
-                border_radius=10,
-                border=ft.border.all(1, "error"),
-                expand=True,
-            ),
-            
-            ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Icon(ft.Icons.CHECK_CIRCLE, color="primary", size=30),
-                        ft.Column([
-                            ft.Text("Paid Bills", size=12, color="outline"),
-                            ft.Text(f"₱{total_paid:,.2f}", size=20, weight="bold", color="primary"),
-                        ], spacing=2, expand=True),
-                    ], spacing=10),
-                ]),
-                padding=15,
-                bgcolor="surface",
-                border_radius=10,
-                border=ft.border.all(1, "primary"),
-                expand=True,
-            ),
-            
-            ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Icon(ft.Icons.RECEIPT, color="secondary", size=30),
-                        ft.Column([
-                            ft.Text("Total Invoices", size=12, color="outline"),
-                            ft.Text(str(len(invoices)), size=20, weight="bold", color="secondary"),
-                        ], spacing=2, expand=True),
-                    ], spacing=10),
-                ]),
-                padding=15,
-                bgcolor="surface",
-                border_radius=10,
-                border=ft.border.all(1, "secondary"),
-                expand=True,
-            ),
-        ], spacing=15),
-        
-        ft.Container(height=20),
-        
-        # Info box
         ft.Container(
-            content=ft.Row([
-                ft.Icon(ft.Icons.INFO_OUTLINE, color="tertiary", size=20),
-                ft.Text(
-                    "Invoices are automatically generated when you place orders. Pay unpaid bills using the payment form or contact the billing clerk.",
-                    size=13,
-                    expand=True,
+            padding=20,
+            content=ft.Column([
+                ft.Row([
+                    ft.Column([
+                        ft.Text("My Bills & Invoices", size=28, weight="bold"),
+                        ft.Text("View and manage your medical bills", size=14, color="outline"),
+                    ], spacing=5, expand=True),
+                ], spacing=15),
+                
+                ft.Container(height=20),
+                
+                # Render Financial Metrics
+                ft.Row([
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Icon(ft.Icons.ERROR_OUTLINE, color="error", size=30),
+                                ft.Column([
+                                    ft.Text("Unpaid Bills", size=12, color="outline"),
+                                    ft.Text(f"₱{total_unpaid:,.2f}", size=20, weight="bold", color="error"),
+                                ], spacing=2, expand=True),
+                            ], spacing=10),
+                        ]),
+                        padding=15,
+                        bgcolor="surface",
+                        border_radius=10,
+                        border=ft.border.all(1, "error"),
+                        expand=True,
+                    ),
+                    
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Icon(ft.Icons.CHECK_CIRCLE, color="primary", size=30),
+                                ft.Column([
+                                    ft.Text("Paid Bills", size=12, color="outline"),
+                                    ft.Text(f"₱{total_paid:,.2f}", size=20, weight="bold", color="primary"),
+                                ], spacing=2, expand=True),
+                            ], spacing=10),
+                        ]),
+                        padding=15,
+                        bgcolor="surface",
+                        border_radius=10,
+                        border=ft.border.all(1, "primary"),
+                        expand=True,
+                    ),
+                    
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Icon(ft.Icons.RECEIPT, color="secondary", size=30),
+                                ft.Column([
+                                    ft.Text("Total Invoices", size=12, color="outline"),
+                                    ft.Text(str(len(invoices)), size=20, weight="bold", color="secondary"),
+                                ], spacing=2, expand=True),
+                            ], spacing=10),
+                        ]),
+                        padding=15,
+                        bgcolor="surface",
+                        border_radius=10,
+                        border=ft.border.all(1, "secondary"),
+                        expand=True,
+                    ),
+                ], spacing=15),
+                
+                ft.Container(height=20),
+                
+                # Informational Banner
+                ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.INFO_OUTLINE, color="tertiary", size=20),
+                        ft.Text(
+                            "Invoices are automatically generated when you place orders. Pay unpaid bills using the payment form or contact the billing clerk.",
+                            size=13,
+                            expand=True,
+                        ),
+                    ], spacing=10),
+                    padding=15,
+                    bgcolor=ft.Colors.with_opacity(0.1, "tertiary"),
+                    border_radius=8,
+                    border=ft.border.all(1, "tertiary"),
                 ),
-            ], spacing=10),
-            padding=15,
-            bgcolor=ft.Colors.with_opacity(0.1, "tertiary"),
-            border_radius=8,
-            border=ft.border.all(1, "tertiary"),
+                
+                ft.Container(height=20),
+                
+                # Render Record Collection
+                ft.Container(height=10),
+                
+                ft.Column([
+                    create_invoice_card(inv) for inv in invoices
+                ], spacing=15) if invoices else ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.RECEIPT_LONG_OUTLINED, size=80, color="outline"),
+                        ft.Text("No invoices yet", size=18, color="outline"),
+                        ft.Text("Invoices will appear here when you place orders", size=14, color="outline"),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
+                    padding=50,
+                    alignment=ft.alignment.center,
+                ),
+            ]),
         ),
-        
-        ft.Container(height=20),
-        
-        # Invoices list
-        ft.Column([
-            ft.Text(f"All Invoices ({len(invoices)})", size=20, weight="bold"),
-            ft.Container(height=10),
-            
-            ft.Column([
-                create_invoice_card(inv) for inv in invoices
-            ], spacing=15) if invoices else ft.Container(
-                content=ft.Column([
-                    ft.Icon(ft.Icons.RECEIPT_LONG_OUTLINED, size=80, color="outline"),
-                    ft.Text("No invoices yet", size=18, color="outline"),
-                    ft.Text("Invoices will appear here when you place orders", size=14, color="outline"),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-                padding=50,
-                alignment=ft.alignment.center,
-            ),
-        ]),
     ], scroll=ft.ScrollMode.AUTO, spacing=0)

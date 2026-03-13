@@ -6,12 +6,11 @@ from utils.notifications import show_success, show_error, show_warning, show_inf
 def ManageStock():
     """Page to Add, Update, Delete, and Search Medicines."""
     
-    # --- STATE VARIABLES ---
+    # Component State Initialization
     selected_medicine_id = None 
     medicine_to_delete = None 
     
-    # --- HELPER: Create Styled Inputs ---
-    # FIX: Removed width=float("inf"). We now rely on the parent container stretching.
+    # UI Component: Styled Input Field
     def create_input(label, icon=None, numeric=False, in_row=False):
         return ft.TextField(
             label=label,
@@ -22,14 +21,12 @@ def ManageStock():
             border_color="outline",
             focused_border_color="primary",
             content_padding=10,
-            # If in_row is True, we expand to share space. 
-            # If False, we don't set width, we let the parent Column stretch us.
             expand=in_row 
         )
 
-    # --- GUI COMPONENTS ---
+    # UI Components Assembly
     
-    # Search Bar
+    # Search input configuration
     search_txt = ft.TextField(
         hint_text="Search medicine name...",
         prefix_icon=ft.Icons.SEARCH,
@@ -40,7 +37,7 @@ def ManageStock():
         on_submit=lambda e: load_data(e) 
     )
     
-    # Filters
+    # Filter dropdown controls
     category_filter = ft.Dropdown(
         label="Category",
         options=[
@@ -78,13 +75,12 @@ def ManageStock():
         on_change=lambda e: load_data(e)
     )
 
-    # --- INPUT FIELDS FOR DIALOG ---
+    # Modal Form Fields
     
-    # 1. Name Input
+    # Medicine Name Field
     name_input = create_input("Medicine Name", ft.Icons.MEDICATION)
     
-    # 2. Category Input (The one that was broken)
-    # FIX: Removed width=float("inf"). It will now respect the dialog width.
+    # Category Selection Field
     category_input = ft.Dropdown(
         label="Category",
         options=category_filter.options[1:], 
@@ -93,15 +89,15 @@ def ManageStock():
         focused_border_color="primary",
     )
     
-    # 3. Price & Stock (Side by side)
+    # Pricing and Inventory Quantities
     price_input = create_input("Price (PHP)", None, numeric=True, in_row=True)
     stock_input = create_input("Stock Qty", None, numeric=True, in_row=True)
     
-    # 4. Expiry & Supplier
+    # Expiry and Supply Chain Details
     expiry_input = create_input("Expiry (YYYY-MM-DD)", ft.Icons.CALENDAR_TODAY)
     supplier_input = create_input("Supplier", ft.Icons.LOCAL_SHIPPING)
 
-    # Main Data Table
+    # Core DataGrid Configuration
     stock_table = ft.DataTable(
         border=ft.border.all(1, "outline"),
         border_radius=10,
@@ -121,10 +117,10 @@ def ManageStock():
         expand=True
     )
 
-    # --- APP LOGIC ---
+    # Application Business Logic
 
     def load_data(e=None):
-        """Connects to DB and fills the table."""
+        """Fetch and populate medicine inventory data."""
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -201,7 +197,7 @@ def ManageStock():
         if stock_table.page:
             stock_table.update()
 
-    # --- DIALOG FUNCTIONS ---
+    # Modal Operation Handlers
 
     def open_add_dialog(e):
         nonlocal selected_medicine_id
@@ -271,7 +267,6 @@ def ManageStock():
             e.page.update()
 
         except Exception as ex:
-            print(f"Error: {str(ex)}")
             show_error(e.page, f"Error: {str(ex)}")
             e.page.update()
 
@@ -291,15 +286,14 @@ def ManageStock():
         show_success(e.page, DELETE_SUCCESS.format("Medicine"))
         e.page.update()
 
-    # --- DEFINE DIALOGS ---
+    # Modal Definitions
     
-    # 1. Add/Edit Form
+    # Edit/Create Medicine Modal
     dialog = ft.AlertDialog(
         bgcolor="surface",
         content=ft.Container(
             width=500,
             content=ft.Column([
-                # FIX: Using STRETCH ensures inputs fill the width, preventing the "Dropdown too wide" bug
                 name_input,
                 ft.Container(height=5),
                 category_input,
@@ -317,7 +311,7 @@ def ManageStock():
         ]
     )
 
-    # 2. Delete Confirmation
+    # Delete Confirmation Modal
     del_dialog = ft.AlertDialog(
         bgcolor="surface",
         title=ft.Text("Confirm Delete"),
@@ -332,7 +326,7 @@ def ManageStock():
         def update(self): pass
     load_data()
 
-    # --- PAGE LAYOUT ---
+    # Main View Assembly
     return ft.Column([
         ft.Row([
             ft.Text("Stock Management", size=28, weight="bold"),

@@ -1,28 +1,28 @@
 import sqlite3
 import os
 
-# Figure out where this file is, so we can put the DB in the same folder
+# Resolve absolute path for database persistence
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, 'storage')
 
-# Make sure the storage folder exists
+# Verify persistence directory exists
 if not os.path.exists(DB_PATH):
     os.makedirs(DB_PATH)
 
 DB_FILE = os.path.join(DB_PATH, "pharmacy.db")
 
-# Helper to connect to the database
+# Initialize SQLite database connection
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-    conn.row_factory = sqlite3.Row # This lets us use column names like row['name']
+    conn.row_factory = sqlite3.Row
     return conn
 
-# Setup the tables if they don't exist
+# Execute database schema migration
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Table for all users
+    # Schema: Users
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,11 +35,18 @@ def init_db():
             phone TEXT,
             dob TEXT,
             address TEXT,
+            status TEXT DEFAULT 'Pending',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Legacy schema migration for status column
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'Pending'")
+    except sqlite3.OperationalError:
+        pass # Column already defined
 
-    # Table for medicines
+    # Schema: Medicines
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS medicines (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,7 +60,7 @@ def init_db():
         )
     ''')
 
-    # Table for prescriptions
+    # Schema: Prescriptions
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS prescriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,7 +81,7 @@ def init_db():
         )
     ''')
 
-    # Table for invoices
+    # Schema: Invoices
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS invoices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,28 +102,29 @@ def init_db():
         )
     ''')
 
-    # Create default users (Admin, Staff, etc.) if they don't exist
-    # We NEED these to log in, but we removed the medicines list.
+    # Provision default system accounts
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cursor.fetchone():
-        print("Adding default test users...")
         users = [
-            ('admin', 'admin123', 'Admin', 'System Admin', ''),
-            ('pharm', 'pharm123', 'Pharmacist', 'Carl Renz', 'Colico'),
-            ('inv', 'inv123', 'Inventory', 'Kenji Nathaniel', 'David'),
-            ('bill', 'bill123', 'Billing', 'Francis Gabriel', 'Nonato'),
-            ('staff', 'staff123', 'Staff', 'Staff Member', ''),
-            ('pat', 'pat123', 'Patient', 'John', 'Doe')
+            ('admin', 'admin123', 'Admin', 'System Admin', '', 'Approved'),
+            ('pharm', 'pharm123', 'Pharmacist', 'Carl Renz', 'Colico', 'Approved'),
+            ('inv', 'inv123', 'Inventory', 'Kenji Nathaniel', 'David', 'Approved'),
+            ('bill', 'bill123', 'Billing', 'Francis Gabriel', 'Nonato', 'Approved'),
+            ('staff', 'staff123', 'Staff', 'Staff Member', '', 'Approved'),
+            ('pat', 'pat123', 'Patient', 'John', 'Doe', 'Approved')
         ]
         cursor.executemany("""
-            INSERT INTO users (username, password, role, full_name, last_name) 
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (username, password, role, full_name, last_name, status) 
+            VALUES (?, ?, ?, ?, ?, ?)
         """, users)
+
+    # Automatically approve provisioned system accounts
+    cursor.execute("UPDATE users SET status = 'Approved' WHERE status IS NULL OR status = 'Pending' AND username IN ('admin', 'pharm', 'inv', 'bill', 'staff', 'pat')")
 
     conn.commit()
     conn.close()
 
-# Check login credentials
+# Authenticate user credentials
 def authenticate_user(username, password):
     conn = get_db_connection()
     cursor = conn.cursor()

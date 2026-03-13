@@ -7,11 +7,11 @@ from datetime import datetime, timedelta
 def AdminDashboard():
     """Admin dashboard with real system overview."""
     
-    # Get REAL statistics from database
+    # Fetch dashboard statistics from database
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # User statistics
+    # User metrics
     cursor.execute("SELECT COUNT(*) FROM users")
     total_users = cursor.fetchone()[0]
     
@@ -21,7 +21,7 @@ def AdminDashboard():
     cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'Pharmacist'")
     total_pharmacists = cursor.fetchone()[0]
     
-    # Medicine statistics
+    # Inventory metrics
     cursor.execute("SELECT COUNT(*) FROM medicines")
     total_medicines = cursor.fetchone()[0]
     
@@ -31,15 +31,15 @@ def AdminDashboard():
     cursor.execute("SELECT COUNT(*) FROM medicines WHERE stock = 0")
     out_of_stock = cursor.fetchone()[0]
     
-    # Prescription statistics
+    # Clinical metrics
     cursor.execute("SELECT COUNT(*) FROM prescriptions WHERE status = 'Pending'")
     pending_prescriptions = cursor.fetchone()[0]
     
-    # Order statistics
+    # Sales metrics
     cursor.execute("SELECT COUNT(*) FROM orders WHERE status IN ('Pending', 'Processing')")
     pending_orders = cursor.fetchone()[0]
     
-    # Recent activity (last 5 actions)
+    # Fetch recent user registrations
     cursor.execute("""
         SELECT username, role, created_at
         FROM users
@@ -48,7 +48,7 @@ def AdminDashboard():
     """)
     recent_users = cursor.fetchall()
     
-    # Get recent prescriptions for activity
+    # Fetch recent prescription updates
     cursor.execute("""
         SELECT p.id, p.status, p.created_at, u.username
         FROM prescriptions p
@@ -58,7 +58,7 @@ def AdminDashboard():
     """)
     recent_prescriptions = cursor.fetchall()
     
-    # Get recent orders
+    # Fetch recent order activity
     cursor.execute("""
         SELECT o.id, o.status, o.order_date, u.username
         FROM orders o
@@ -70,7 +70,7 @@ def AdminDashboard():
     
     conn.close()
     
-    # Stat card helper
+    # UI Component: Statistics Card
     def create_stat_card(title, value, icon, color, subtitle=""):
         return ft.Container(
             content=ft.Column([
@@ -98,7 +98,7 @@ def AdminDashboard():
             height = 140,
         )
     
-    # Quick action button
+    # UI Component: Quick Action Button
     def create_action_button(text, icon, route, color):
         return ft.ElevatedButton(
             content=ft.Row([
@@ -113,7 +113,7 @@ def AdminDashboard():
             ),
         )
     
-    # Recent activity item
+    # UI Component: Activity Feed Item
     def create_activity_item(action, user, time_str):
         try:
             dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
@@ -144,10 +144,10 @@ def AdminDashboard():
             border_radius=8,
         )
     
-    # Build recent activity list
+    # Compile activity timeline
     activity_list = []
     
-    # Add user registrations
+    # Append registration events
     for u in recent_users:
         activity_list.append(
             create_activity_item(
@@ -157,7 +157,7 @@ def AdminDashboard():
             )
         )
     
-    # Add prescription activities
+    # Append prescription events
     for p in recent_prescriptions:
         status = p[1]
         action = f"Prescription #{p[0]} {status.lower()}"
@@ -165,14 +165,14 @@ def AdminDashboard():
             create_activity_item(action, p[3], p[2])
         )
     
-    # Add order activities
+    # Append order events
     for o in recent_orders:
         action = f"Order #{o[0]} placed"
         activity_list.append(
             create_activity_item(action, o[3], o[2])
         )
     
-    # Take only last 5 activities
+    # Truncate to most recent 5 items
     activity_list = activity_list[:5]
     
     if not activity_list:
@@ -184,7 +184,7 @@ def AdminDashboard():
         ]
     
     return ft.Column([
-        # Welcome header
+        # Header section
         ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.ADMIN_PANEL_SETTINGS, color="primary", size=40),
@@ -204,7 +204,7 @@ def AdminDashboard():
             padding=20,
         ),
         
-        # Statistics cards - REAL DATA
+        # KPI metric cards
         ft.Row([
             create_stat_card(
                 "Total Users",
@@ -237,7 +237,7 @@ def AdminDashboard():
         
         ft.Container(height=20),
         
-        # Quick actions
+        # Fast navigation actions
         ft.Container(
             content=ft.Column([
                 ft.Text("Quick Actions", size=20, weight="bold"),
@@ -270,9 +270,9 @@ def AdminDashboard():
         
         ft.Container(height=20),
         
-        # Recent activity and system health
+        # Activity feed and system diagnostic panel
         ft.Row([
-            # Recent activity - REAL DATA
+            # Activity feed
             ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -291,7 +291,7 @@ def AdminDashboard():
                 height=450,
             ),
             
-            # System health - REAL STATUS
+            # Diagnostic status panel
             ft.Container(
                 content=ft.Column([
                     ft.Text("System Health", size=20, weight="bold"),

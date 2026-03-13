@@ -8,23 +8,23 @@ from utils.notifications import show_success, show_error, SEARCH_NO_RESULTS, SEA
 def StaffPatientSearch():
     """Search for patient records with detailed information."""
     
-    # This column will hold all the search results
+    # Dynamic container for search results
     results_container = ft.Column(spacing=15)
     
-    # The search input box
+    # Target search phrase input
     search_field = ft.TextField(
         label="Search Patient",
         hint_text="Enter name or phone number...",
         prefix_icon=ft.Icons.SEARCH,
-        # Important: Setting border_color to primary makes it visible in Dark Mode!
+        # Visual adjustments for layout consistency
         border_color="primary",
         expand=True,
         autofocus=True,
         text_size=14,
     )
     
-    # --- CARD CREATOR ---
-    # Creates the nice card for a single patient result
+    # Profile Card Component
+    # Render visual card for patient record
     def create_patient_card(patient):
         return ft.Container(
             content=ft.Column([
@@ -40,7 +40,7 @@ def StaffPatientSearch():
                     ft.Column([
                         ft.Text(patient['full_name'], size=18, weight="bold"),
                         ft.Text(f"ID: {patient['id']}", size=12, color="outline"),
-                        # A little badge to show they are a patient
+                        # Role indicator
                         ft.Container(
                             content=ft.Text("Patient", size=10, weight="bold", color="white"),
                             bgcolor="primary",
@@ -49,7 +49,7 @@ def StaffPatientSearch():
                         )
                     ], spacing=2, expand=True),
                     
-                    # Arrow button to open the full details
+                    # Action indicator: View Details
                     ft.IconButton(
                         icon=ft.Icons.ARROW_FORWARD,
                         icon_color="primary",
@@ -60,7 +60,7 @@ def StaffPatientSearch():
                 
                 ft.Divider(height=20, color="outlineVariant"),
                 
-                # Info Grid (Phone, Email, Date)
+                # Contact and contextual details
                 ft.Row([
                     ft.Column([
                         ft.Row([ft.Icon(ft.Icons.PHONE, size=16, color="outline"), ft.Text(patient['phone'] or "N/A", size=13)], spacing=8),
@@ -79,13 +79,13 @@ def StaffPatientSearch():
             shadow=ft.BoxShadow(blur_radius=5, color=ft.Colors.with_opacity(0.05, "black"))
         )
     
-    # --- SEARCH LOGIC ---
+    # Search Query Execution
     def perform_search(e):
         # Clear previous results first
         results_container.controls.clear()
         term = search_field.value
 
-        # If box is empty, show a prompt
+        # Prompt when search term missing
         if not term:
             results_container.controls.append(
                 ft.Container(
@@ -104,7 +104,7 @@ def StaffPatientSearch():
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            # SQL query: Find matching name OR phone number
+            # Execute parameterized fuzzy search
             cursor.execute("""
                 SELECT * FROM users
                 WHERE role = 'Patient'
@@ -115,7 +115,7 @@ def StaffPatientSearch():
             conn.close()
 
             if not rows:
-                # Nothing found :(
+                # Empty result state
                 results_container.controls.append(
                     ft.Container(
                         content=ft.Text("No patients found.", size=16, color="error"),
@@ -125,9 +125,9 @@ def StaffPatientSearch():
                 )
                 show_error(e.page, SEARCH_NO_RESULTS.format(term), duration=2)
             else:
-                # Show how many we found
+                # Result metrics
                 results_container.controls.append(ft.Text(f"Found {len(rows)} results:", weight="bold"))
-                # Loop through results and create cards
+                # Populate result container
                 for row in rows:
                     # Convert tuple to dictionary
                     p = {
@@ -148,7 +148,7 @@ def StaffPatientSearch():
 
         e.page.update()
     
-    # --- PAGE LAYOUT ---
+    # Overall View Construct
     return ft.Column([
         NavigationHeader("Patient Search", "Find patient records quickly", show_back=False),
         
@@ -177,7 +177,7 @@ def StaffPatientSearch():
     ], 
     scroll=ft.ScrollMode.AUTO, 
     spacing=0,
-    # IMPORTANT: This forces the content to start at the top, removing the weird gap!
+    # Vertical alignment enforcement
     alignment=ft.MainAxisAlignment.START,
     expand=True
     )

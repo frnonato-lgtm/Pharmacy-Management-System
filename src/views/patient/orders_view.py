@@ -8,25 +8,25 @@ from datetime import datetime
 def OrdersView():
     """Orders history and tracking view with live data."""
     
-    # Check if user is logged in
+    # Validate user session state
     user = AppState.get_user()
     if not user:
         return ft.Text("Please log in first", color="error")
     
     user_id = user['id']
     
-    # Filter state default
+    # Default search parameter
     current_filter = {"value": "All"}
     
-    # Container for order cards
+    # Results array container
     orders_container = ft.Column(spacing=15)
     
-    # Button references for styling
+    # Component style bindings
     btn_all = ft.Ref[ft.ElevatedButton]()
     btn_pending = ft.Ref[ft.ElevatedButton]()
     btn_completed = ft.Ref[ft.ElevatedButton]()
     
-    # Database fetching logic
+    # Retrieve order records
     def load_orders(filter_status="All"):
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -60,7 +60,7 @@ def OrdersView():
         
         return orders
     
-    # Helper for nice dates
+    # Date formatter
     def format_date(date_str):
         try:
             dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
@@ -68,7 +68,7 @@ def OrdersView():
         except:
             return date_str
     
-    # Helper for status colors
+    # Status theme resolver
     def get_status_color(status):
         colors = {
             'Pending': 'tertiary',
@@ -79,7 +79,7 @@ def OrdersView():
         }
         return colors.get(status, 'outline')
     
-    # Creates the order card widget
+    # Component rendering
     def create_order_card(order):
         order_id = order[0]
         order_date = format_date(order[1])
@@ -137,19 +137,19 @@ def OrdersView():
             bgcolor="surface",
         )
     
-    # Pop-up details logic
+    # Modal trigger action
     def view_order_details(e, order_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Fetch the main order details
+        # Query requested order
         cursor.execute("""
             SELECT o.id, o.order_date, o.status, o.total_amount, o.payment_method
             FROM orders o WHERE o.id = ?
         """, (order_id,))
         order = cursor.fetchone()
         
-        # Fetch the specific items to do math
+        # Retrieve corresponding items
         cursor.execute("""
             SELECT m.name, oi.quantity, oi.unit_price, oi.subtotal
             FROM order_items oi
@@ -161,14 +161,13 @@ def OrdersView():
         
         if not order: return
         
-        # --- EXPLAINING THE 150 PESOS ---
-        # We calculate the cost of items. If the Order Total in DB is higher,
-        # we treat the difference as "Tax/Fees". This fixes the display issue.
+        # Reconcile display inconsistencies
+        # Compute dynamic item totals against stored snapshot for accurate metadata display
         calculated_subtotal = sum(item[3] for item in items)
         stored_total = order[3]
         tax_amount = max(0, stored_total - calculated_subtotal)
         
-        # Creating list of items for the popup
+        # Construct items UI nodes
         items_widgets = []
         for item in items:
             items_widgets.append(
@@ -178,7 +177,7 @@ def OrdersView():
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
             )
         
-        # Building the dialog UI
+        # Render detail modal
         dialog = ft.AlertDialog(
             title=ft.Text(f"Order #{order_id} Details"),
             content=ft.Column([
@@ -190,7 +189,7 @@ def OrdersView():
                 *items_widgets,
                 ft.Divider(),
                 
-                # Showing breakdown
+                # Render financial summary
                 ft.Row([
                     ft.Text("Subtotal:", size=13),
                     ft.Text(f"₱{calculated_subtotal:.2f}", size=13),
@@ -215,7 +214,7 @@ def OrdersView():
         
         e.page.open(dialog)
     
-    # Reload logic for filtering
+    # Refresh data view
     def update_orders_list(e=None):
         orders = load_orders(current_filter["value"])
         orders_container.controls.clear()
@@ -224,7 +223,7 @@ def OrdersView():
             for order in orders:
                 orders_container.controls.append(create_order_card(order))
         else:
-            # Empty state
+            # Display fallback graphic
             orders_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -243,7 +242,7 @@ def OrdersView():
                 )
             )
         
-        # Updating button colors (Outline vs Filled)
+        # Apply conditional classes
         status = current_filter["value"]
         style_outline = ft.ButtonStyle(color="primary", bgcolor=ft.Colors.TRANSPARENT, side=ft.BorderSide(1, "primary"))
         style_fill = ft.ButtonStyle(color="white", bgcolor="primary")
@@ -254,15 +253,15 @@ def OrdersView():
             
         if e: e.page.update()
     
-    # Handles filter clicks
+    # Filter execution callback
     def filter_click(e, status):
         current_filter["value"] = status
         update_orders_list(e)
     
-    # Run once on start
+    # Initial component mount
     update_orders_list(None)
     
-    # Main Page Layout
+    # Primary composition
     return ft.Column([
         ft.Text("My Orders", size=28, weight="bold"),
         ft.Text("View and track your medicine orders", size=14, color="outline"),

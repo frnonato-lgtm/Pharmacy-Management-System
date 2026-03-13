@@ -9,14 +9,14 @@ from utils.notifications import show_success, show_error
 def PatientPrescriptionsView():
     """View patient's own prescriptions and submit new ones."""
     
-    # 1. First, we get the current user to know who is logged in
+    # Authenticate user session
     user = AppState.get_user()
     
-    # 2. Connect to the database to get the history
+    # Connect to active database
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # We select the specific columns we need for the list
+    # Query existing prescriptions
     cursor.execute("""
         SELECT id, status, notes, created_at 
         FROM prescriptions 
@@ -27,7 +27,7 @@ def PatientPrescriptionsView():
     prescriptions = cursor.fetchall()
     conn.close()
     
-    # This helper function creates the colorful card for each prescription in the list
+    # Render prescription card component
     def create_prescription_card(rx):
         # Define colors for different statuses
         status_colors = {
@@ -73,24 +73,24 @@ def PatientPrescriptionsView():
             bgcolor=ft.Colors.with_opacity(0.05, color),
         )
     
-    # --- LOGIC FOR THE "NEW PRESCRIPTION" POPUP ---
+    # New Prescription Form
     def submit_prescription_dialog(e):
         
-        # Get list of available medicines for dropdown
+        # Fetch active inventory
         conn_med = get_db_connection()
         cursor_med = conn_med.cursor()
         cursor_med.execute("SELECT id, name FROM medicines WHERE stock > 0 ORDER BY name")
         available_medicines = cursor_med.fetchall()
         conn_med.close()
         
-        # Get list of doctors/pharmacists for dropdown
+        # Fetch active medical staff
         conn_doc = get_db_connection()
         cursor_doc = conn_doc.cursor()
         cursor_doc.execute("SELECT id, full_name FROM users WHERE role IN ('Pharmacist', 'Doctor', 'Staff') ORDER BY full_name")
         available_doctors = cursor_doc.fetchall()
         conn_doc.close()
         
-        # A helper to make all input fields look the same
+        # Form input generator
         def create_input(label, multiline=False, keyboard_type=None):
             return ft.TextField(
                 label=label,
@@ -124,19 +124,19 @@ def PatientPrescriptionsView():
         duration = create_input("Duration (in days) *", keyboard_type=ft.KeyboardType.NUMBER)
         additional_notes = create_input("Additional Notes", multiline=True)
         
-        # A hidden text field for showing error messages
+        # Error feedback node
         error_text = ft.Text("", color="error", size=12)
         
-        # The logic that runs when "Submit" is clicked
+        # Submission execution handler
         def save_prescription(dialog_e):
-            # 1. Validation: Check if required fields are empty
+            # Validate required fields
             if not all([doctor_dropdown.value, medicine_dropdown.value, dosage.value, frequency.value, duration.value]):
                 error_text.value = "Please fill in all required fields!"
                 show_error(dialog_e.control.page, "Please fill in all required fields!")
                 dialog_e.control.page.update()
                 return
 
-            # 2. Validation: Check if duration is actually a number
+            # Enforce numerical bounds
             try:
                 duration_days = int(duration.value)
             except:
@@ -149,7 +149,7 @@ def PatientPrescriptionsView():
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 
-                # Get the selected doctor's name from the dropdown
+                # Map selected physician
                 doctor_id = int(doctor_dropdown.value)
                 cursor.execute("SELECT full_name FROM users WHERE id = ?", (doctor_id,))
                 doctor_result = cursor.fetchone()
@@ -163,12 +163,11 @@ def PatientPrescriptionsView():
                 medicine_result = cursor.fetchone()
                 medicine_name = medicine_result[0] if medicine_result else "Unknown Medicine"
                 
-                # Create a combined note string for legacy support
+                # Construct legacy annotation string
                 notes_text = f"Doctor: {doctor_name}\nMedicine: {medicine_name}\nDosage: {dosage.value}\nFrequency: {frequency.value}\nDuration: {duration_days} days\nNotes: {additional_notes.value or 'None'}"
                 
-                # --- FIX: INSERT CORRECT DATA ---
-                # We are explicitly inserting dosage, frequency, duration, and doctor_name
-                # into their specific columns so they don't get mixed up.
+                # Write structured fields
+                # Ensure dimensional parameters correctly route to respective independent schema columns
                 cursor.execute("""
                     INSERT INTO prescriptions 
                     (patient_id, medicine_id, status, notes, created_at, dosage, frequency, duration, doctor_name)
@@ -187,22 +186,22 @@ def PatientPrescriptionsView():
                 conn.commit()
                 conn.close()
 
-                # Close the popup
+                # Dismiss modal dialog
                 dialog_e.control.page.close(prescription_form)
 
-                # Show success message
+                # Trigger confirmation toast
                 show_success(dialog_e.control.page, "Prescription submitted! Waiting for review.")
 
-                # Reload the page to show the new item
+                # Execute navigation reset
                 dialog_e.control.page.go("/patient/prescriptions")
                 
             except Exception as ex:
-                # If something crashes, show the error
+                # Handle execution failure
                 error_text.value = f"Error: {str(ex)}"
                 show_error(dialog_e.control.page, "Failed to submit prescription")
                 dialog_e.control.page.update()
 
-        # The actual Dialog Window UI
+        # View Structure Modal
         prescription_form = ft.AlertDialog(
             modal=True,
             title=ft.Row([
@@ -240,10 +239,10 @@ def PatientPrescriptionsView():
             actions_padding=20,
         )
         
-        # Open the dialog
+        # Reveal modal layer
         e.page.open(prescription_form)
 
-    # --- MAIN PAGE LAYOUT ---
+    # Render Primary Screen
     return ft.Column([
         # The top header section
         ft.Row([

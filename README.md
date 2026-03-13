@@ -3,7 +3,7 @@
 *CCCS 106 - Application Development and Emerging Technologies | CS 3110 - Software Engineering 1 | CS 3212 - Software Engineering 2*
 
 ## Project Overview
-The **PharmaOps PMS** is a modern desktop application designed to streamline daily pharmacy operations. It handles user authentication, inventory tracking, prescription validation, billing, and patient management.
+The **PharmaOps PMS** is a modern web application designed to streamline daily pharmacy operations. It handles user authentication (including Google Sign-In), inventory tracking, prescription validation, billing, and patient management.
 
 Built using **Python** and **Flet** (Flutter for Python), the system features a responsive, material-design interface with **Dark Mode** support and **Role-Based Access Control (RBAC)**.
 
@@ -20,11 +20,13 @@ Built using **Python** and **Flet** (Flutter for Python), the system features a 
 
 ## Key Features
 *   **Role-Based Security:** Distinct dashboards and permissions for Patients, Admins, Pharmacists, Inventory Managers, Billing Clerks, and Staff.
+*   **Google OAuth Integration:** Sign up and log in with Google for a streamlined authentication experience.
 *   **Adaptive UI:** Fully supported **Dark Mode** and Light Mode with a cohesive Teal theme.
 *   **Inventory Management:** Real-time tracking of medicine stock with visual "Low Stock" alerts.
 *   **Prescription Handling:** Pharmacists can view pending prescriptions and dispense medication.
-*   **Patient Portal:** Patients can sign up, search for medicines, and view their cart.
-*   **Billing System:** Generation of invoices and sales tracking.
+*   **Patient Portal:** Patients can sign up, search for medicines, manage their cart, and view invoices.
+*   **Billing System:** Generation of invoices, payment processing, and sales reporting.
+*   **Duplicate Account Prevention:** Signup validates uniqueness of username, email, and full name.
 *   **Local Database:** Powered by **SQLite** for fast, persistent data storage without external servers.
 
 ---
@@ -98,7 +100,7 @@ The database is pre-seeded with these accounts for testing purposes:
 | **Billing Clerk** | `bill` | `bill123` | Invoices, Sales Reports |
 | **Staff Member** | `staff` | `staff123` | Patient Search |
 
-New users can also create an account using the **"Create Account"** button on the Patient Login page.
+New users can also create an account using the **"Create Account"** tab or sign up via **Google** on the landing page. Newly created accounts require **Admin approval** before they can log in.
 
 ---
 
@@ -129,9 +131,9 @@ Below are screenshots demonstrating various features of patient manual:
 | **Patient Browse Medicine** | Allows patients to browse available medicines, view details, and use the search bar to quickly find medicines| ![Browsing Medicine](src/assets/patient_browse_med.png)<br>![Medicine Search Page](src/assets/patient_meds_page.png) | 
 | **Upload Prescription** | Enables patients to submit a prescription form for pharmacist before purchasing required medication | ![Upload Prescription](src/assets/patient_upload_presc.png)<br>![Upload Prescription Page](src/assets/patient_prescription_page.png) | 
 | **Patient Browse Cart** | Shows all selected medicines in the cart, allowing patients to review, update quantities, or remove items before checkout. | ![Patient Cart](src/assets/patient_view_cart.png)<br>![Patient Cart Page](src/assets/patient_view_cart_page.png) | 
-| **Viewing Patient Orders** | Displays a list of all past and current orders, including order status and purchase history also total amount for easy tracking | ![Viewing All Recent Orders](src/assets/patient_view_all)<br>![View All Orders Page](src/assets/patient_view_all_orders_page.png) | 
+| **Viewing Patient Orders** | Displays a list of all past and current orders, including order status, purchase history, and total amount for easy tracking | ![Viewing All Recent Orders](src/assets/patient_view_all.png)<br>![View All Orders Page](src/assets/patient_view_all_orders_page.png) | 
 | **Patient Side-bar Navigation**| Provides easy access to all patient features such as browsing medicine, orders, cart, bills, and profile through a clean navigation menu| ![Patient Side Navigation Bar](src/assets/patient_nav_bar.png) | 
-| **Viewing Patient Profile** | Shows the patient’s personal information, including contact details, account profile, as well as logout button and with options for updates | ![Patient Profile](src/assets/patient_profile)<br>![Patient Profile Page](src/assets/patient_profile_page.png) |
+| **Viewing Patient Profile** | Shows the patient’s personal information, including contact details, account profile, as well as logout button and with options for updates | ![Patient Profile](src/assets/patient_profile.png)<br>![Patient Profile Page](src/assets/patient_profile_page.png) |
 
 ---
 

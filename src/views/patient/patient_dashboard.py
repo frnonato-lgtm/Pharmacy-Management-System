@@ -7,7 +7,7 @@ from services.database import get_db_connection
 def PatientDashboard():
     """Main patient dashboard with live data from database."""
     
-    # Get current logged-in user
+    # Retrieve authenticated user session
     user = AppState.get_user()
     if not user:
         return ft.Text("Please log in first", color="error")
@@ -15,32 +15,32 @@ def PatientDashboard():
     user_id = user['id']
     user_name = user['full_name'] if user.get('full_name') else "Patient"
     
-    # Fetch real data from database
+    # Fetch dashboard statistics from database
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Get active prescriptions count
+    # Fetch active prescription metrics
     cursor.execute("""
         SELECT COUNT(*) FROM prescriptions 
         WHERE patient_id = ? AND status IN ('Pending', 'Approved')
     """, (user_id,))
     active_prescriptions = cursor.fetchone()[0]
     
-    # Get pending orders count
+    # Fetch pending order metrics
     cursor.execute("""
         SELECT COUNT(*) FROM orders 
         WHERE patient_id = ? AND status IN ('Pending', 'Processing')
     """, (user_id,))
     pending_orders = cursor.fetchone()[0]
     
-    # Get completed orders count
+    # Fetch completed order metrics
     cursor.execute("""
         SELECT COUNT(*) FROM orders 
         WHERE patient_id = ? AND status = 'Completed'
     """, (user_id,))
     completed_orders = cursor.fetchone()[0]
     
-    # Get recent orders (last 3)
+    # Fetch recent order activity
     cursor.execute("""
         SELECT 
             o.id,
@@ -58,7 +58,7 @@ def PatientDashboard():
     """, (user_id,))
     recent_orders = cursor.fetchall()
     
-    # Get recent prescriptions (last 2 for notifications)
+    # Fetch recent prescription updates
     cursor.execute("""
         SELECT 
             p.id,
@@ -73,7 +73,7 @@ def PatientDashboard():
     """, (user_id,))
     recent_prescriptions = cursor.fetchall()
     
-    # Get low stock medicines (for patient awareness)
+    # Fetch low stock alerts
     cursor.execute("""
         SELECT name, stock
         FROM medicines
@@ -85,7 +85,7 @@ def PatientDashboard():
     
     conn.close()
     
-    # Stats cards
+    # UI Component: Statistics Card
     def create_stat_card(title, value, icon, color):
         return ft.Container(
             content=ft.Column([
@@ -109,7 +109,7 @@ def PatientDashboard():
             expand=True,
         )
     
-    # Quick action buttons
+    # UI Component: Quick Action Button
     def create_action_button(text, icon, route, color):
         return ft.ElevatedButton(
             content=ft.Row([
@@ -124,17 +124,17 @@ def PatientDashboard():
             ),
         )
     
-    # Order list item - with real data
+    # UI Component: Order List Item
     def create_order_item(order):
         order_id = order[0]
         status = order[1]
         items = order[4] if order[4] else "No items"
         
-        # Truncate long item names
+        # Format item string length
         if len(items) > 30:
             items = items[:27] + "..."
         
-        # Status color mapping
+        # Map order status to theme colors
         status_colors = {
             'Pending': 'tertiary',
             'Processing': 'secondary',
@@ -167,7 +167,7 @@ def PatientDashboard():
             border_radius=8,
         )
     
-    # Notification item - with real data
+    # UI Component: Notification Item
     def create_notification(title, time_str, icon, icon_color):
         return ft.Container(
             content=ft.Row([
@@ -182,7 +182,7 @@ def PatientDashboard():
             border_radius=8,
         )
     
-    # Build order list
+    # Render order timeline
     order_widgets = []
     if recent_orders:
         for order in recent_orders:
@@ -201,10 +201,10 @@ def PatientDashboard():
             )
         )
     
-    # Build notifications
+    # Render notification feed
     notification_widgets = []
     
-    # Add low stock alert first (if any)
+    # Append low stock warnings
     if low_stock_medicines:
         notification_widgets.append(
             ft.Container(
@@ -226,7 +226,7 @@ def PatientDashboard():
             )
         )
     
-    # Add prescription notifications
+    # Append prescription alerts
     if recent_prescriptions:
         for presc in recent_prescriptions:
             status = presc[1]
@@ -252,7 +252,7 @@ def PatientDashboard():
                     )
                 )
     
-    # If no notifications at all
+    # Render empty state
     if not notification_widgets:
         notification_widgets.append(
             ft.Container(
@@ -266,7 +266,7 @@ def PatientDashboard():
         )
     
     return ft.Column([
-        # Welcome message
+        # Header section
         ft.Container(
             content=ft.Row([
                 ft.Icon(ft.Icons.WAVING_HAND, color="tertiary", size=40),
@@ -286,7 +286,7 @@ def PatientDashboard():
             padding=20,
         ),
         
-        # Stats row - REAL DATA
+        # KPI metric cards
         ft.Row([
             create_stat_card(
                 "Active Prescriptions", 
@@ -310,7 +310,7 @@ def PatientDashboard():
         
         ft.Container(height=20),
         
-        # Quick actions
+        # Fast navigation actions
         ft.Container(
             content=ft.Column([
                 ft.Text("Quick Actions", size=20, weight="bold"),
@@ -344,9 +344,9 @@ def PatientDashboard():
         
         ft.Container(height=20),
         
-        # Recent orders and notifications - REAL DATA
+        # Activity feed and notifications panel
         ft.Row([
-            # Recent Orders
+            # Order history panel
             ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -367,7 +367,7 @@ def PatientDashboard():
                 height=300,
             ),
             
-            # Notifications
+            # Notification panel
             ft.Container(
                 content=ft.Column([
                     ft.Text("Notifications", size=20, weight="bold"),

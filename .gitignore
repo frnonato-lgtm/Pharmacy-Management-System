@@ -1,12 +1,29 @@
-# Python cache files
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
 
 # Database
-pharmacy.db
+src/storage/
+*.db
 
-# Virtual Environment
+# Virtual environment
+venv/
 .venv/
 
-# VSCode Files
+# IDE
 .vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Gemini agent
+.gemini/
+
+# Environment variables
+.env
+
+# Temp files
+test_*.py

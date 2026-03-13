@@ -7,7 +7,7 @@ from components.navigation_header import NavigationHeader
 def StaffPatientDetail(patient_id, source="search"):
     """Display detailed patient information (read-only)."""
     
-    # 1. Fetch Patient Data from DB
+    # Retrieve target patient demographic data
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE id = ? AND role = 'Patient'", (patient_id,))
@@ -32,7 +32,7 @@ def StaffPatientDetail(patient_id, source="search"):
         'created_at': row[10]
     }
     
-    # Helper to create those little info squares
+    # Information tile component
     def info_tile(label, value, icon):
         return ft.Container(
             content=ft.Row([
@@ -62,7 +62,7 @@ def StaffPatientDetail(patient_id, source="search"):
         ft.Container(
             padding=20,
             content=ft.Column([
-                # Profile Header Block
+                # Render patient contextual header
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.ACCOUNT_CIRCLE, size=80, color="primary"),
@@ -101,7 +101,7 @@ def StaffPatientDetail(patient_id, source="search"):
                 
                 ft.Container(height=30),
                 
-                # Read-only notice bar at bottom
+                # Display read-only restriction
                 ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.LOCK, color="white"),

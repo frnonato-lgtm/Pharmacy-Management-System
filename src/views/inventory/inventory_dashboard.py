@@ -4,13 +4,13 @@ from services.database import get_db_connection
 def InventoryDashboard():
     """Main screen for Inventory Manager."""
     
-    # Get real numbers from the database
+    # Retrieve KPIs from database
     conn = get_db_connection()
     total_meds = conn.execute("SELECT COUNT(*) FROM medicines").fetchone()[0]
     low_stock_count = conn.execute("SELECT COUNT(*) FROM medicines WHERE stock < 10").fetchone()[0]
     conn.close()
 
-    # Simple function to make the colored boxes
+    # Metric card component factory
     def create_stat_card(title, value, icon, color):
         return ft.Container(
             content=ft.Column([
@@ -33,7 +33,7 @@ def InventoryDashboard():
         ft.Text("Inventory Dashboard", size=28, weight="bold"),
         ft.Container(height=20),
         
-        # The stat row
+        # Key Performance Indicators row
         ft.Row([
             create_stat_card("Total Products", total_meds, ft.Icons.INVENTORY_2, "primary"),
             create_stat_card("Low Stock Items", low_stock_count, ft.Icons.WARNING, "error"),
@@ -41,7 +41,7 @@ def InventoryDashboard():
 
         ft.Container(height=20),
         
-        # Action button
+        # Navigation action buttons
         ft.Text("Quick Actions", size=20, weight="bold"),
         ft.ElevatedButton("Manage Stock", icon=ft.Icons.EDIT, on_click=lambda e: e.page.go("/inventory/stock"), height=50),
         

@@ -768,7 +768,7 @@ def ReportsView():
             return [ft.Text(f"Error generating orders report: {str(e)}", color="error", size=14)]
     
     def generate_report(e):
-        """Pick the right report function and run it."""
+        """Execute selected report generator."""
         # Clear controls completely first
         report_output.controls.clear()
         e.page.update()

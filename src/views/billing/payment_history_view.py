@@ -11,8 +11,8 @@ def PaymentHistoryView():
     
     payments_container = ft.Column(spacing=10)
     
-    # --- FILTERS ---
-    # FIX: Changed border_color to "primary" for dark mode visibility
+    # Initialize filtering components
+    # Apply theme border configuration
     payment_method_filter = ft.Dropdown(
         label="Payment Method",
         options=[
@@ -33,24 +33,24 @@ def PaymentHistoryView():
         label="From Date", 
         value=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"), 
         width=150, 
-        border_color="primary" # Dark Mode Fix
+        border_color="primary" # Apply theme border
     )
     
     date_to = ft.TextField(
         label="To Date", 
         value=datetime.now().strftime("%Y-%m-%d"), 
         width=150, 
-        border_color="primary" # Dark Mode Fix
+        border_color="primary" # Apply theme border
     )
     
     search_field = ft.TextField(
         hint_text="Search by invoice #, patient name...", 
         prefix_icon=ft.Icons.SEARCH, 
-        border_color="primary", # Dark Mode Fix
+        border_color="primary", # Apply theme border
         expand=True
     )
     
-    # --- DB FUNCTION ---
+    # Query transaction records
     def get_payments_from_db(payment_method="All", date_start="", date_end="", search=""):
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -88,7 +88,7 @@ def PaymentHistoryView():
         conn.close()
         return results
     
-    # --- CARD CREATOR ---
+    # Render transaction component
     def create_payment_card(payment):
         inv_id, inv_number, amount, payment_method, payment_date, created_at, patient_name, clerk_name = payment
         
@@ -129,7 +129,7 @@ def PaymentHistoryView():
             bgcolor="surface",
         )
     
-    # --- LOAD PAYMENTS ---
+    # Populate view list
     def load_payments(e=None):
         payments_container.controls.clear()
         
@@ -160,7 +160,7 @@ def PaymentHistoryView():
             for payment in payments:
                 payments_container.controls.append(create_payment_card(payment))
         else:
-            # Centered empty state
+            # Display empty state
             payments_container.controls.append(
                 ft.Container(
                     content=ft.Column([
@@ -175,27 +175,27 @@ def PaymentHistoryView():
         
         if e and hasattr(e, 'page'): e.page.update()
     
-    # Initial load
+    # Initial component mount
     load_payments(None)
     
-    # --- PAGE LAYOUT ---
+    # Render primary structure
     return ft.Column([
-        # Back button removed
+        # Hide navigation back
         NavigationHeader("Payment History", "View all payment transactions and revenue", show_back=False),
         
         ft.Container(
             content=ft.Column([
-                # Filters
+                # Form parameter constraints
                 ft.Text("Filter Payments", size=20, weight="bold"),
                 ft.Row([payment_method_filter, date_from, date_to], spacing=10, wrap=True),
                 
                 ft.Row([
                     search_field,
                     ft.ElevatedButton("Apply Filters", icon=ft.Icons.FILTER_ALT, bgcolor="primary", color="white", on_click=load_payments),
-                    # FIX: Refresh button removed
+                    # Ensure standard controls
                 ], spacing=10),
                 
-                # Export buttons removed completely as requested
+                # Ensure simplified layout
                 
                 ft.Divider(height=30),
                 payments_container,
