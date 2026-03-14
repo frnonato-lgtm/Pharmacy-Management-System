@@ -130,6 +130,7 @@ def StaffDashboard():
                     ft.Container(
                         content=ft.Column([
                             ft.Text("Quick Actions", size=18, weight="bold"),
+                            create_action_button("📦 Order Tracking", ft.Icons.LOCAL_SHIPPING, "/staff/orders", "tertiary"),
                             create_action_button("Search Patients", ft.Icons.SEARCH, "/staff/search", "primary"),
                             create_action_button("View All Patients", ft.Icons.LIST, "/staff/patients", "secondary"),
                             create_action_button("Help Desk", ft.Icons.HELP, "/staff/help", "tertiary"),

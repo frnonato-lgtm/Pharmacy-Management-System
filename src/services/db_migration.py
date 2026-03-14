@@ -111,13 +111,34 @@ def run_migration_and_seed():
                     total_amount REAL NOT NULL,
                     payment_method TEXT,
                     payment_status TEXT DEFAULT 'Unpaid',
+                    staff_id INTEGER,
+                    pharmacy_notes TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     notes TEXT,
-                    FOREIGN KEY (patient_id) REFERENCES users(id)
+                    FOREIGN KEY (patient_id) REFERENCES users(id),
+                    FOREIGN KEY (staff_id) REFERENCES users(id)
                 )
             """)
             print("✅ Orders table created")
         else:
             print("✅ Orders table already exists")
+            # Add new columns for Staff Order Tracking if missing
+            cursor.execute("PRAGMA table_info(orders)")
+            orders_columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'staff_id' not in orders_columns:
+                cursor.execute("ALTER TABLE orders ADD COLUMN staff_id INTEGER")
+                print("✅ Added staff_id column to orders")
+            
+            if 'pharmacy_notes' not in orders_columns:
+                cursor.execute("ALTER TABLE orders ADD COLUMN pharmacy_notes TEXT")
+                print("✅ Added pharmacy_notes column to orders")
+            
+            if 'updated_at' not in orders_columns:
+                cursor.execute("ALTER TABLE orders ADD COLUMN updated_at TIMESTAMP")
+                # Set default value for existing records
+                cursor.execute("UPDATE orders SET updated_at = order_date WHERE updated_at IS NULL")
+                print("✅ Added updated_at column to orders")
         
         # 4. Create order_items table
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='order_items'")
@@ -130,13 +151,32 @@ def run_migration_and_seed():
                     quantity INTEGER NOT NULL,
                     unit_price REAL NOT NULL,
                     subtotal REAL NOT NULL,
+                    pharmacist_approved INTEGER DEFAULT 0,
+                    pharmacist_id INTEGER,
+                    approval_notes TEXT,
                     FOREIGN KEY (order_id) REFERENCES orders(id),
-                    FOREIGN KEY (medicine_id) REFERENCES medicines(id)
+                    FOREIGN KEY (medicine_id) REFERENCES medicines(id),
+                    FOREIGN KEY (pharmacist_id) REFERENCES users(id)
                 )
             """)
             print("✅ Order_items table created")
         else:
             print("✅ Order_items table already exists")
+            # Add new columns for Pharmacist Approval Tracking if missing
+            cursor.execute("PRAGMA table_info(order_items)")
+            order_items_columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'pharmacist_approved' not in order_items_columns:
+                cursor.execute("ALTER TABLE order_items ADD COLUMN pharmacist_approved INTEGER DEFAULT 0")
+                print("✅ Added pharmacist_approved column to order_items")
+            
+            if 'pharmacist_id' not in order_items_columns:
+                cursor.execute("ALTER TABLE order_items ADD COLUMN pharmacist_id INTEGER")
+                print("✅ Added pharmacist_id column to order_items")
+            
+            if 'approval_notes' not in order_items_columns:
+                cursor.execute("ALTER TABLE order_items ADD COLUMN approval_notes TEXT")
+                print("✅ Added approval_notes column to order_items")
         
         # ============================================
         # PART 3: BILLING FEATURES (Enhanced)
@@ -605,6 +645,13 @@ def run_migration_and_seed():
             
             for order in completed_orders:
                 order_id, order_patient_id, total = order
+                invoice_number = f'INV-{invoice_counter}'
+                
+                # Check if this invoice already exists
+                cursor.execute("SELECT id FROM invoices WHERE invoice_number = ?", (invoice_number,))
+                if cursor.fetchone():
+                    invoice_counter += 1
+                    continue  # Skip if already exists
                 
                 # Calculate invoice details
                 subtotal = total
@@ -632,7 +679,7 @@ def run_migration_and_seed():
                      status, payment_method, payment_date, billing_clerk_id, notes, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    f'INV-{invoice_counter}', 
+                    invoice_number, 
                     order_patient_id, 
                     order_id, 
                     subtotal, 
@@ -665,7 +712,7 @@ def run_migration_and_seed():
                         f'{status} via {payment_method}'
                     ))
                 
-                invoice_counter += 1
+                invoice_counter += 1  # Increment after successful insert
             
             print(f"✅ Added {len(completed_orders)} invoices with payment records")
         else:

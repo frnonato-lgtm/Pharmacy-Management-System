@@ -43,6 +43,7 @@ from views.staff.patient_search import StaffPatientSearch
 from views.staff.patient_detail import StaffPatientDetail
 from views.staff.all_patients import AllPatientsView
 from views.staff.help_desk import HelpDeskView
+from views.staff.order_tracking import StaffOrderTracking
 def main(page: ft.Page):
     page.title = "PharmaOps PMS"
     
@@ -150,6 +151,7 @@ def main(page: ft.Page):
             # Staff Component Routes
             elif troute == "/staff/search": content = StaffPatientSearch()
             elif troute == "/staff/patients": content = AllPatientsView() 
+            elif troute == "/staff/orders": content = StaffOrderTracking()
             elif troute == "/staff/help": content = HelpDeskView()
             
             # Dynamic Patient Detail Routing

@@ -1,4 +1,4 @@
-"""Shopping cart view with real database integration."""
+"""Shopping cart view with real database integration - FIXED VERSION."""
 
 import flet as ft
 from state import AppState
@@ -181,7 +181,7 @@ def CartView():
             bgcolor="surface",
         )
     
-    # Process checkout action
+    # ✅ FIXED: Process checkout with prescription approval tracking
     def proceed_to_checkout(e):
         items = load_cart()
         if not items:
@@ -206,7 +206,7 @@ def CartView():
 
             order_id = cursor.lastrowid
 
-            # Process individual line items
+            # ✅ FIX: Process individual line items WITH prescription approval check
             for item in items:
                 medicine_id = item[1]
                 quantity = item[4]
@@ -220,10 +220,46 @@ def CartView():
                 if current_stock < quantity:
                     raise Exception(f"Insufficient stock for {item[2]}")
 
+                # ✅ KEY FIX: Check if this medicine is from an APPROVED prescription
                 cursor.execute("""
-                    INSERT INTO order_items (order_id, medicine_id, quantity, unit_price, subtotal)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (order_id, medicine_id, quantity, unit_price, subtotal_item))
+                    SELECT id, pharmacist_id, reviewed_date
+                    FROM prescriptions
+                    WHERE patient_id = ?
+                    AND medicine_id = ?
+                    AND status = 'Approved'
+                    ORDER BY reviewed_date DESC
+                    LIMIT 1
+                """, (user_id, medicine_id))
+                
+                approved_prescription = cursor.fetchone()
+                
+                # If prescription is approved, mark the order item as approved
+                if approved_prescription:
+                    prescription_id, pharmacist_id, reviewed_date = approved_prescription
+                    
+                    # ✅ Insert order item WITH pharmacist approval
+                    cursor.execute("""
+                        INSERT INTO order_items 
+                        (order_id, medicine_id, quantity, unit_price, subtotal, 
+                         pharmacist_approved, pharmacist_id, approval_notes)
+                        VALUES (?, ?, ?, ?, ?, 1, ?, ?)
+                    """, (
+                        order_id, 
+                        medicine_id, 
+                        quantity, 
+                        unit_price, 
+                        subtotal_item,
+                        pharmacist_id,
+                        f"Pre-approved via Prescription #{prescription_id}"
+                    ))
+                else:
+                    # ⏳ Insert order item WITHOUT pharmacist approval (needs review)
+                    cursor.execute("""
+                        INSERT INTO order_items 
+                        (order_id, medicine_id, quantity, unit_price, subtotal, 
+                         pharmacist_approved, pharmacist_id, approval_notes)
+                        VALUES (?, ?, ?, ?, ?, 0, NULL, NULL)
+                    """, (order_id, medicine_id, quantity, unit_price, subtotal_item))
 
                 # Deduct applied inventory
                 cursor.execute("""
@@ -307,7 +343,7 @@ def CartView():
                     icon=ft.Icons.ARROW_BACK,
                     on_click=lambda e: e.page.go("/patient/search"),
                 ),
-            ], spacing=10, horizontal_alignment=ft.CrossAxisAlignment.CENTER) # <--- This centers them
+            ], spacing=10, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
         else:
             # Render empty state
             summary_container.content = ft.Column([
@@ -424,3 +460,4 @@ def CartView():
             ),
         ], alignment=ft.MainAxisAlignment.CENTER),
     ], scroll=ft.ScrollMode.AUTO, spacing=0)
+
