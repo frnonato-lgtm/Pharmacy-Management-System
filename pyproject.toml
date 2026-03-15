@@ -1,9 +1,9 @@
 [project]
-name = "new-folder"
+name = "PharmaOps-PMS"
 version = "0.1.0"
-description = ""
+description = "A modern web application designed to streamline daily pharmacy operations."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
@@ -18,7 +18,7 @@ org = "com.mycompany"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
-product = "new-folder"
+product = "PharmaOps PMS"
 
 # company name to display in about app dialogs
 company = "Flet"

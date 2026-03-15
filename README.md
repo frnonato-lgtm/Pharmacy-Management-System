@@ -18,6 +18,38 @@ Built using **Python** and **Flet** (Flutter for Python), the system features a 
 
 ---
 
+## What's New in V2.0 (Showcase-Ready)
+
+### 1. Robustness & Reliability (The "No-Crash" Rule)
+*   **Input Validation:** Strict constraints on text fields, dropdowns, and uploads.
+*   **Graceful Error Handling:** Console errors replaced with user-friendly Toast notifications.
+*   **Edge Case Testing:** Dashboards and lists now handle "zero data" states gracefully.
+*   **Loading Indicators:** Visual progress feedback for deletions and long-running actions.
+*   **Duplicate Accounts Prevention:** Validation for unique Username, Email, and Full Name.
+*   **Revenue Algorithm Fixes:** Reports now correctly filter out pending and cancelled orders.
+
+### 2. User Experience (UX) & Polish
+*   **Navigation Refinement:** Added "Return/Go Back" paths to all user dashboards.
+*   **UI Consistency:** Standardized margins, fonts, and button styles across all views.
+*   **Responsive Design:** Application elements now adapt to various resolutions and window sizes.
+*   **Header & Branding:** Implementation of the PharmaOps logo and improved header placement.
+*   **Clean Interface:** Simplified landing page with role-based login selection.
+
+### 3. Feature Depth (The "V2.0" Additions)
+*   **Search & Filter:** Real-time search bars and multi-option filtering for medicines and logs.
+*   **Data Persistence:** Secure SQLite storage with hashed/encrypted sensitive information.
+*   **Authentication:** "Sign in with Google" integration for secure session handling.
+*   **Audit Trail:** Comprehensive activity logs for auditing critical system actions.
+*   **Notification System:** Red badges for carts and notification text for order counts.
+*   **Profile Settings:** Dedicated Setting UI for all roles to manage personal information.
+*   **Pharmacist Controls:** Refined Reject/Approve logic for prescription validation.
+
+### 4. Developer Quality & Documentation
+*   **Code Cleanup:** Removed dead code, unused variables, and console logs.
+*   **README Overhaul:** Addition of setup guides and V2.0 details.
+
+---
+
 ## Key Features
 *   **Role-Based Security:** Distinct dashboards and permissions for Patients, Admins, Pharmacists, Inventory Managers, Billing Clerks, and Staff.
 *   **Google OAuth Integration:** Sign up and log in with Google for a streamlined authentication experience.
