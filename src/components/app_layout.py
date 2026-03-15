@@ -165,10 +165,13 @@ class AppLayout(ft.Row):
             
         elif role == "Pharmacist":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.MEDICAL_SERVICES, label="Prescriptions"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         elif role == "Inventory":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.INVENTORY, label="Manage Stock"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         elif role == "Billing":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.RECEIPT_LONG, label="Invoices"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         elif role == "Admin":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="Users"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.ANALYTICS, label="Reports"))
@@ -178,6 +181,7 @@ class AppLayout(ft.Row):
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON_SEARCH, label="Find Patient"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="All Patients"))  
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.HELP, label="Help Desk"))  
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         
         # Add persistent exit component
         if role != "Patient":
@@ -227,7 +231,20 @@ class AppLayout(ft.Row):
         elif label == "My Cart": self.page.go("/patient/cart")
         elif label == "My Orders": self.page.go("/patient/orders")
         elif label == "My Bills": self.page.go("/patient/invoices")
-        elif label == "My Profile": self.page.go("/patient/profile")
+        elif label == "My Profile":
+            # Route to role-specific profile
+            user = AppState.get_user()
+            role = user['role']
+            if role == "Patient": 
+                self.page.go("/patient/profile")
+            elif role == "Pharmacist": 
+                self.page.go("/pharmacist/profile")
+            elif role == "Billing": 
+                self.page.go("/billing/profile")
+            elif role == "Staff": 
+                self.page.go("/staff/profile")
+            elif role == "Inventory":
+                self.page.go("/inventory/profile")
         # Staff modular views
         elif label == "Prescriptions": self.page.go("/pharmacist/prescriptions")
         elif label == "Manage Stock": self.page.go("/inventory/stock")

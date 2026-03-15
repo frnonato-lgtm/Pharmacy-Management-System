@@ -24,12 +24,14 @@ from views.admin.logs_view import SystemLogs
 
 from views.inventory.inventory_dashboard import InventoryDashboard
 from views.inventory.manage_stock import ManageStock
+from views.inventory.profile_view import InventoryProfileView
 
 from views.pharmacist.pharmacist_dashboard import PharmacistDashboard
 from views.pharmacist.prescriptions_view import PrescriptionsView as PharmacistPrescriptionsView
 from views.pharmacist.prescription_detail import PrescriptionDetailView  
 from views.pharmacist.reports_view import ReportsView as PharmacistReportsView  
 from views.pharmacist.medicine_search import PharmacistMedicineSearch
+from views.pharmacist.profile_view import PharmacistProfileView
 
 from views.billing.billing_dashboard import BillingDashboard
 from views.billing.create_invoices_view import CreateInvoicesView
@@ -37,6 +39,7 @@ from views.billing.billing_reports_view import BillingReportsView
 from views.billing.invoices_list_view import InvoicesListView
 from views.billing.payment_history_view import PaymentHistoryView
 from views.billing.invoice_detail_view import InvoiceDetailView
+from views.billing.profile_view import BillingProfileView
 
 from views.staff.staff_dashboard import StaffDashboard
 from views.staff.patient_search import StaffPatientSearch
@@ -44,6 +47,7 @@ from views.staff.patient_detail import StaffPatientDetail
 from views.staff.all_patients import AllPatientsView
 from views.staff.help_desk import HelpDeskView
 from views.staff.order_tracking import StaffOrderTracking
+from views.staff.profile_view import StaffProfileView
 def main(page: ft.Page):
     page.title = "PharmaOps PMS"
     
@@ -116,6 +120,7 @@ def main(page: ft.Page):
             elif troute == "/pharmacist/prescriptions": content = PharmacistPrescriptionsView()
             elif troute == "/pharmacist/reports": content = PharmacistReportsView() 
             elif troute == "/pharmacist/medicines": content = PharmacistMedicineSearch()
+            elif troute == "/pharmacist/profile": content = PharmacistProfileView()
             elif troute.startswith("/pharmacist/prescription/"):
                 rx_id = troute.split("/")[-1]
                 try:
@@ -128,12 +133,15 @@ def main(page: ft.Page):
 
             # Inventory Component Routes
             elif troute == "/inventory/stock": content = ManageStock()
+            elif troute == "/inventory/profile": content = InventoryProfileView()
 
             # Billing Component Routes
             elif troute == "/billing/create-invoice": content = CreateInvoicesView()
             elif troute == "/billing/invoices": content = InvoicesListView()
             elif troute == "/billing/payments": content = PaymentHistoryView()
             elif troute == "/billing/reports" : content = BillingReportsView()
+            elif troute == "/billing/invoices": content = InvoicesDetailView()
+            elif troute == "/billing/profile": content = BillingProfileView()
             elif troute.startswith("/billing/invoice/"):
                 inv_id = troute.split("/")[-1]
                 try:
@@ -153,7 +161,7 @@ def main(page: ft.Page):
             elif troute == "/staff/patients": content = AllPatientsView() 
             elif troute == "/staff/orders": content = StaffOrderTracking()
             elif troute == "/staff/help": content = HelpDeskView()
-            
+            elif troute == "/staff/profile": content = StaffProfileView()
             # Dynamic Patient Detail Routing
             elif troute.startswith("/staff/patient/"):
                 parts = troute.split("/")
