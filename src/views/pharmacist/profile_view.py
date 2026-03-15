@@ -31,6 +31,8 @@ def PharmacistProfileView():
     txt_phone = ft.Text(user_data['phone'] or "Not provided", size=14, weight="bold")
     txt_license = ft.Text(user_data.get('license_number') or "Not provided", size=14, weight="bold")
     txt_specialization = ft.Text(user_data.get('specialization') or "Not provided", size=14, weight="bold")
+    txt_dob = ft.Text(user_data.get('dob') or "Not provided", size=14, weight="bold")
+    txt_address = ft.Text(user_data.get('address') or "Not provided", size=14, weight="bold")
 
     def create_info_row(label, text_control, icon):
         return ft.Container(
@@ -50,7 +52,7 @@ def PharmacistProfileView():
     # Profile Editing Logic
     def edit_profile(e):
         
-        def create_input(label, val, icon, multiline=False):
+        def create_input(label, val, icon, multiline=True):
             return ft.TextField(
                 label=label,
                 value=val if val and val != "Not provided" else "",
@@ -65,6 +67,10 @@ def PharmacistProfileView():
         full_name_field = create_input("Full Name", user_data.get('full_name'), ft.Icons.PERSON)
         email_field = create_input("Email", user_data.get('email'), ft.Icons.EMAIL)
         phone_field = create_input("Phone", user_data.get('phone'), ft.Icons.PHONE)
+        license_field = create_input("License Number", user_data.get('license_number'), ft.Icons.BADGE)
+        specialization_field = create_input("Specialization", user_data.get('specialization'), ft.Icons.WORK)
+        dob_field = create_input("Date of Birth (YYYY-MM-DD)", user_data.get('dob'), ft.Icons.CAKE)
+        address_field = create_input("Address", user_data.get('address'), ft.Icons.HOME, multiline=True)
         
         def save_changes(dialog_e):
             conn = get_db_connection()
@@ -72,12 +78,16 @@ def PharmacistProfileView():
             try:
                 cursor.execute("""
                     UPDATE users 
-                    SET full_name = ?, email = ?, phone = ?
+                    SET full_name = ?, email = ?, phone = ?, license_number = ?, specialization = ?, dob = ?, address = ?
                     WHERE id = ?
                 """, (
                     full_name_field.value,
                     email_field.value,
                     phone_field.value,
+                    license_field.value,
+                    specialization_field.value,
+                    dob_field.value,
+                    address_field.value,
                     user_data['id']
                 ))
                 conn.commit()
@@ -86,11 +96,19 @@ def PharmacistProfileView():
                 user_data['full_name'] = full_name_field.value
                 user_data['email'] = email_field.value
                 user_data['phone'] = phone_field.value
+                user_data['license_number'] = license_field.value
+                user_data['specialization'] = specialization_field.value
+                user_data['dob'] = dob_field.value
+                user_data['address'] = address_field.value
                 
                 # Refresh UI components
                 txt_name_header.value = get_display_name()
                 txt_email.value = email_field.value or "Not provided"
                 txt_phone.value = phone_field.value or "Not provided"
+                txt_license.value = license_field.value or "Not provided"
+                txt_specialization.value = specialization_field.value or "Not provided"
+                txt_dob.value = dob_field.value or "Not provided"
+                txt_address.value = address_field.value or "Not provided"
                 
                 # Synchronize global application state
                 user['full_name'] = full_name_field.value
@@ -118,6 +136,10 @@ def PharmacistProfileView():
                     full_name_field,
                     email_field,
                     phone_field,
+                    license_field,
+                    specialization_field,
+                    dob_field,
+                    address_field,
                 ], spacing=15, scroll=ft.ScrollMode.AUTO, tight=True)
             ),
             actions=[
@@ -268,7 +290,7 @@ def PharmacistProfileView():
         ft.Text("Contact Information", size=20, weight="bold"),
         ft.Container(height=10),
         
-        # Contact information grid
+        # Contact information grid - 2x2 layout
         ft.Row([
             ft.Column([
                 create_info_row("Email", txt_email, ft.Icons.EMAIL),
@@ -278,6 +300,19 @@ def PharmacistProfileView():
             ft.Column([
                 create_info_row("Phone", txt_phone, ft.Icons.PHONE),
                 create_info_row("Specialization", txt_specialization, ft.Icons.WORK),
+            ], spacing=10, expand=True),
+        ], spacing=15),
+        
+        ft.Container(height=10),
+        
+        # Additional Info
+        ft.Row([
+            ft.Column([
+                create_info_row("Date of Birth", txt_dob, ft.Icons.CAKE),
+            ], spacing=10, expand=True),
+            
+            ft.Column([
+                create_info_row("Address", txt_address, ft.Icons.HOME),
             ], spacing=10, expand=True),
         ], spacing=15),
         

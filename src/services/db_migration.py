@@ -38,6 +38,30 @@ def run_migration_and_seed():
         print("🔄 Starting complete database migration & seeding...\n")
         
         # ============================================
+        # PART 0: ADD DOB AND ADDRESS TO USERS TABLE
+        # ============================================
+        print("📋 Part 0: User Profile Fields")
+        print("-" * 50)
+        
+        # Check existing columns in users table
+        cursor.execute("PRAGMA table_info(users)")
+        user_columns = [col[1] for col in cursor.fetchall()]
+        
+        # Add dob column if it doesn't exist
+        if 'dob' not in user_columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN dob TEXT")
+            print("✅ Added 'dob' (Date of Birth) column to users table")
+        else:
+            print("✅ 'dob' column already exists in users table")
+        
+        # Add address column if it doesn't exist
+        if 'address' not in user_columns:
+            cursor.execute("ALTER TABLE users ADD COLUMN address TEXT")
+            print("✅ Added 'address' column to users table")
+        else:
+            print("✅ 'address' column already exists in users table")
+        
+        # ============================================
         # PART 1: PHARMACIST FEATURES
         # ============================================
         print("📋 Part 1: Pharmacist Features")
@@ -767,6 +791,8 @@ def run_migration_and_seed():
         print("\n" + "=" * 50)
         print("✅ MIGRATION & SEEDING COMPLETED SUCCESSFULLY!")
         print("=" * 50)
+        print("\n💡 All user roles now have DOB and Address fields!")
+        print("   You can now update profiles for all roles.\n")
         print("\n📊 Database Summary:")
         
         # Count statistics

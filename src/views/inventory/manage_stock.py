@@ -116,6 +116,29 @@ def ManageStock():
         rows=[],
         expand=True
     )
+    
+    # Empty state container (will be shown when no data)
+    empty_state = ft.Container(
+        content=ft.Column([
+            ft.Icon(ft.Icons.INVENTORY_2_OUTLINED, size=100, color="outline"),
+            ft.Container(height=20),
+            ft.Text("No medicines in inventory", size=20, weight="bold", color="outline"),
+            ft.Container(height=10),
+            ft.Text("To get started, click the 'Add Medicine' button above", 
+                   size=14, color="outline", text_align=ft.TextAlign.CENTER),
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
+        padding=80,
+        alignment=ft.alignment.center,
+        visible=False,  # Initially hidden
+        expand=True,
+    )
+    
+    # Container that will hold either the table or empty state
+    table_container = ft.Container(
+        content=ft.Row([stock_table], expand=True, scroll=ft.ScrollMode.AUTO),
+        padding=0,
+        expand=True
+    )
 
     # Application Business Logic
 
@@ -153,10 +176,31 @@ def ManageStock():
         low_stock_meds = []
         out_of_stock_meds = []
 
-        if not meds and (search_txt.value or category_filter.value != "All" or stock_filter.value != "All"):
+        # Show empty state when no medicines found
+        if not meds:
             page = e.page if e else stock_table.page
-            if page:
-                show_info(page, "No medicine found matching your search criteria.")
+            
+            # If filters are applied but no results - show info toast
+            if search_txt.value or category_filter.value != "All" or stock_filter.value != "All":
+                if page:
+                    show_info(page, "No medicine found matching your search criteria.")
+                # Show table (even if empty) when filters are active
+                table_container.visible = True
+                empty_state.visible = False
+            else:
+                # No medicines in database at all - show get started message
+                table_container.visible = False
+                empty_state.visible = True
+            
+            if stock_table.page:
+                stock_table.update()
+                table_container.update()
+                empty_state.update()
+            return
+        
+        # We have medicines - show table, hide empty state
+        table_container.visible = True
+        empty_state.visible = False
 
         for m in meds:
             if m['stock'] == 0:
@@ -196,6 +240,8 @@ def ManageStock():
 
         if stock_table.page:
             stock_table.update()
+            table_container.update()
+            empty_state.update()
 
     # Modal Operation Handlers
 
@@ -356,10 +402,10 @@ def ManageStock():
         
         ft.Container(height=20),
         
-        ft.Container(
-            content=ft.Row([stock_table], expand=True, scroll=ft.ScrollMode.AUTO),
-            padding=0,
-            expand=True
-        ),
+        # Stack with both table and empty state
+        ft.Stack([
+            table_container,
+            empty_state,
+        ], expand=True),
         
     ], scroll=ft.ScrollMode.AUTO, expand=True)

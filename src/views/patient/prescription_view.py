@@ -294,11 +294,14 @@ def PatientPrescriptionsView():
             create_prescription_card(rx) for rx in prescriptions
         ], spacing=10) if prescriptions else ft.Container(
             content=ft.Column([
-                ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=80, color="outline"),
-                ft.Text("No prescriptions yet", size=18, color="outline"),
-                ft.Text("Click the button above to submit one!", size=14, color="outline"),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-            padding=50,
-            alignment=ft.alignment.center,
+        ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=100, color="outline"),
+        ft.Container(height=20),
+        ft.Text("No prescriptions yet", size=20, weight="bold", color="outline"),
+        ft.Container(height=10),
+        ft.Text("To get started, click the 'Submit Prescription' button above", 
+               size=14, color="outline", text_align=ft.TextAlign.CENTER),
+    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
+    padding=80,
+    alignment=ft.alignment.center,
         ),
     ], scroll=ft.ScrollMode.AUTO, spacing=0)

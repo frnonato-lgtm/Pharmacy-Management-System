@@ -29,6 +29,8 @@ def BillingProfileView():
     
     txt_email = ft.Text(user_data['email'] or "Not provided", size=14, weight="bold")
     txt_phone = ft.Text(user_data['phone'] or "Not provided", size=14, weight="bold")
+    txt_dob = ft.Text(user_data.get('dob') or "Not provided", size=14, weight="bold")
+    txt_address = ft.Text(user_data.get('address') or "Not provided", size=14, weight="bold")
 
     def create_info_row(label, text_control, icon):
         return ft.Container(
@@ -48,7 +50,7 @@ def BillingProfileView():
     # Profile Editing Logic
     def edit_profile(e):
         
-        def create_input(label, val, icon):
+        def create_input(label, val, icon, multiline=True):
             return ft.TextField(
                 label=label,
                 value=val if val and val != "Not provided" else "",
@@ -62,6 +64,8 @@ def BillingProfileView():
         full_name_field = create_input("Full Name", user_data.get('full_name'), ft.Icons.PERSON)
         email_field = create_input("Email", user_data.get('email'), ft.Icons.EMAIL)
         phone_field = create_input("Phone", user_data.get('phone'), ft.Icons.PHONE)
+        dob_field = create_input("Date of Birth (YYYY-MM-DD)", user_data.get('dob'), ft.Icons.CAKE)
+        address_field = create_input("Address", user_data.get('address'), ft.Icons.HOME, multiline=True)
         
         def save_changes(dialog_e):
             conn = get_db_connection()
@@ -69,12 +73,14 @@ def BillingProfileView():
             try:
                 cursor.execute("""
                     UPDATE users 
-                    SET full_name = ?, email = ?, phone = ?
+                    SET full_name = ?, email = ?, phone = ?, dob = ?, address = ?
                     WHERE id = ?
                 """, (
                     full_name_field.value,
                     email_field.value,
                     phone_field.value,
+                    dob_field.value,
+                    address_field.value,
                     user_data['id']
                 ))
                 conn.commit()
@@ -82,11 +88,15 @@ def BillingProfileView():
                 user_data['full_name'] = full_name_field.value
                 user_data['email'] = email_field.value
                 user_data['phone'] = phone_field.value
+                user_data['dob'] = dob_field.value
+                user_data['address'] = address_field.value
                 
                 txt_name_header.value = get_display_name()
                 txt_email.value = email_field.value or "Not provided"
                 txt_phone.value = phone_field.value or "Not provided"
-                
+                txt_dob.value = dob_field.value or "Not provided"
+                txt_address.value = address_field.value or "Not provided"
+
                 user['full_name'] = full_name_field.value
                 AppState.set_user(user)
 
@@ -112,6 +122,8 @@ def BillingProfileView():
                     full_name_field,
                     email_field,
                     phone_field,
+                    dob_field,
+                    address_field,
                 ], spacing=15, scroll=ft.ScrollMode.AUTO, tight=True)
             ),
             actions=[
@@ -263,9 +275,27 @@ def BillingProfileView():
         ft.Container(height=10),
         
         # Contact information grid
+        # Contact information grid - 2x2 layout
         ft.Row([
-            create_info_row("Email", txt_email, ft.Icons.EMAIL),
-            create_info_row("Phone", txt_phone, ft.Icons.PHONE),
+            ft.Column([
+                create_info_row("Email", txt_email, ft.Icons.EMAIL),
+            ], spacing=10, expand=True),
+            
+            ft.Column([
+                create_info_row("Phone", txt_phone, ft.Icons.PHONE),
+            ], spacing=10, expand=True),
+        ], spacing=15),
+
+        ft.Container(height=10),
+
+        ft.Row([
+            ft.Column([
+                create_info_row("Date of Birth", txt_dob, ft.Icons.CAKE),
+            ], spacing=10, expand=True),
+            
+            ft.Column([
+                create_info_row("Address", txt_address, ft.Icons.HOME),
+            ], spacing=10, expand=True),
         ], spacing=15),
         
         ft.Container(height=20),
