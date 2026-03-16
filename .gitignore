@@ -27,3 +27,4 @@ Thumbs.db
 
 # Temp files
 test_*.py
+migrate_to_turso.py

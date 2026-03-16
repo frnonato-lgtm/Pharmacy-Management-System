@@ -17,3 +17,8 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false # Get this from Turso Dashboard
+      - key: TURSO_AUTH_TOKEN
+        sync: false # Get this from Turso Dashboard
+

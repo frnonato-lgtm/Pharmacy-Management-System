@@ -1,5 +1,82 @@
 import sqlite3
 import os
+import json
+import urllib.request
+
+# Custom Turso Client (No external dependencies, 3.14 compatible)
+class LibsqlRow:
+    def __init__(self, columns, values):
+        self._data = dict(zip(columns, values))
+        self._values = values
+    def __getitem__(self, key):
+        if isinstance(key, int): return self._values[key]
+        return self._data[key]
+    def keys(self): return list(self._data.keys())
+
+class LibsqlCursor:
+    def __init__(self, conn):
+        self.conn = conn
+        self.result_rows = []
+        self.columns = []
+        self.index = 0
+    
+    def execute(self, sql, params=()):
+        # Convert params to Turso format
+        p = []
+        for val in params:
+            if isinstance(val, int): p.append({"type": "integer", "value": str(val)})
+            elif isinstance(val, float): p.append({"type": "float", "value": val})
+            elif val is None: p.append({"type": "null"})
+            else: p.append({"type": "text", "value": str(val)})
+
+        payload = {"requests": [{"type": "execute", "stmt": {"sql": sql, "args": p}}]}
+        
+        req = urllib.request.Request(
+            self.conn.api_url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Authorization": f"Bearer {self.conn.token}", "Content-Type": "application/json"},
+            method="POST"
+        )
+
+        with urllib.request.urlopen(req) as res:
+            data = json.loads(res.read().decode("utf-8"))
+            exec_res = data["results"][0]["response"]["result"]
+            self.columns = [c["name"] for c in exec_res["cols"]]
+            self.rowcount = exec_res.get("affected_row_count", 0)
+            self.result_rows = []
+            for r in exec_res["rows"]:
+                self.result_rows.append([v.get("value") for v in r])
+            self.index = 0
+        return self
+
+    def executemany(self, sql, param_list):
+        for params in param_list:
+            self.execute(sql, params)
+        return self
+
+    def fetchone(self):
+        if self.index >= len(self.result_rows): return None
+        row = self.result_rows[self.index]
+        self.index += 1
+        if self.conn.row_factory == sqlite3.Row:
+            return LibsqlRow(self.columns, row)
+        return row
+
+    def fetchall(self):
+        return [self.fetchone() for _ in range(len(self.result_rows) - self.index)]
+
+class LibsqlConnection:
+    def __init__(self, url, token):
+        # Normalize URL to pipeline
+        api_url = url.replace("libsql://", "https://")
+        if not api_url.endswith("/v2/pipeline"):
+            api_url = f"{api_url.rstrip('/')}/v2/pipeline"
+        self.api_url = api_url
+        self.token = token
+        self.row_factory = None
+    def cursor(self): return LibsqlCursor(self)
+    def commit(self): pass
+    def close(self): pass
 
 # Resolve absolute path for database persistence
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -11,11 +88,21 @@ if not os.path.exists(DB_PATH):
 
 DB_FILE = os.path.join(DB_PATH, "pharmacy.db")
 
-# Initialize SQLite database connection
+# Initialize database connection (supports Turso and local SQLite)
 def get_db_connection():
-    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    # Check for Turso Environment Variables
+    turso_url = os.environ.get("TURSO_DATABASE_URL")
+    turso_token = os.environ.get("TURSO_AUTH_TOKEN")
+
+    if turso_url and turso_token:
+        # Use our custom 3.14-friendly HTTP client
+        return LibsqlConnection(turso_url, turso_token)
+    else:
+        # Fallback to Local SQLite
+        conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+
 
 # Execute database schema migration
 def init_db():
