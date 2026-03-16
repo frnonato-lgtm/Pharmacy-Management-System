@@ -115,13 +115,27 @@ def MedicineSearch():
         e.page.snack_bar.open = True
         e.page.update()
     
-    # Execute cart insertion
+    # Execute cart insertion with stock validation
     def add_to_cart(medicine_id, medicine_name, e):
         conn = get_db_connection()
         cursor = conn.cursor()
         
         try:
-            # Ensure table schema
+            # 1. Verify current stock directly from database
+            cursor.execute("SELECT stock FROM medicines WHERE id = ?", (medicine_id,))
+            res = cursor.fetchone()
+            if not res:
+                show_snackbar(e, "Medicine not found", error=True)
+                return
+            
+            current_stock = res[0]
+            if current_stock <= 1:
+                show_snackbar(e, f"Sorry, {medicine_name} must maintain at least 1 unit in the warehouse stock", error=True)
+                # Refresh list to update UI
+                load_medicines(e)
+                return
+
+            # 2. Ensure cart table exists
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS cart (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,45 +148,47 @@ def MedicineSearch():
                 )
             """)
             
-            # Verify existing entries
+            # 3. Update stock and cart in a single transaction
+            # Deduct 1 from stock
+            cursor.execute("UPDATE medicines SET stock = stock - 1 WHERE id = ?", (medicine_id,))
+            
+            # Check if item already in cart
             cursor.execute("""
-                SELECT id, quantity FROM cart 
+                SELECT id FROM cart 
                 WHERE patient_id = ? AND medicine_id = ?
             """, (user_id, medicine_id))
-            
             existing = cursor.fetchone()
             
             if existing:
-                # Increment existing quantity
-                cursor.execute("""
-                    UPDATE cart 
-                    SET quantity = quantity + 1 
-                    WHERE id = ?
-                """, (existing[0],))
+                cursor.execute("UPDATE cart SET quantity = quantity + 1 WHERE id = ?", (existing[0],))
                 show_snackbar(e, f"Updated {medicine_name} quantity in cart")
-                # Increment badge count immediately for instant feedback
-                current_count = int(cart_badge_text.value)
-                cart_badge_text.value = str(current_count + 1)
             else:
-                # Insert new item record
                 cursor.execute("""
                     INSERT INTO cart (patient_id, medicine_id, quantity)
                     VALUES (?, ?, 1)
                 """, (user_id, medicine_id))
                 show_snackbar(e, f"Added {medicine_name} to cart")
-                # Increment badge count immediately for instant feedback
-                current_count = int(cart_badge_text.value)
-                cart_badge_text.value = str(current_count + 1)
             
             conn.commit()
             
-            # Emit application state event
+            # 4. Synchronize UI
+            # Update local list to show decreased stock
+            load_medicines(e)
+            
+            # Update top-right badge
+            update_cart_badge_display()
+            
+            # Emit event for sidebar synchronization
             try:
                 AppState.emit('cart_changed')
             except Exception:
                 pass
             
+            # Show global success indicator
+            AppState.show_success()
+            
         except Exception as ex:
+            if conn: conn.rollback()
             show_snackbar(e, f"Failed to add to cart: {str(ex)}", error=True)
         finally:
             conn.close()

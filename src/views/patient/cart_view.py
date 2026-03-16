@@ -56,50 +56,79 @@ def CartView():
         
         return items
     
-    # Handle quantity updates
-    def update_quantity(cart_id, medicine_id, new_quantity, stock, e):
+    # Handle quantity updates with stock synchronization
+    def update_quantity(cart_id, medicine_id, new_quantity, old_quantity, stock, e):
         if new_quantity <= 0:
-            remove_from_cart(cart_id, e)
+            remove_from_cart(cart_id, medicine_id, old_quantity, e)
             return
 
-        if new_quantity > stock:
-            show_error(e.page, f"Only {stock} items available in stock")
+        diff = new_quantity - old_quantity
+        if diff == 0:
             return
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE cart SET quantity = ? WHERE id = ?", (new_quantity, cart_id))
-        conn.commit()
-        conn.close()
-
-        # Emit cart changed event to update badge across app
+        
         try:
-            AppState.emit('cart_changed')
-        except Exception:
-            pass
+            # If incrementing, check if enough stock is actually available in DB (keeping at least 1)
+            if diff > 0:
+                cursor.execute("SELECT stock FROM medicines WHERE id = ?", (medicine_id,))
+                db_stock = cursor.fetchone()[0]
+                if db_stock - diff < 1:
+                    show_error(e.page, f"At least 1 unit of {medicine_id} must remain in the warehouse stock")
+                    return
 
-        # Show success indicator
-        AppState.show_success()
-        refresh_cart(e)
+            # Update both tables in a single transaction
+            cursor.execute("UPDATE cart SET quantity = ? WHERE id = ?", (new_quantity, cart_id))
+            cursor.execute("UPDATE medicines SET stock = stock - ? WHERE id = ?", (diff, medicine_id))
+            
+            conn.commit()
+
+            # Emit cart changed event to update badge and sidebar
+            try:
+                AppState.emit('cart_changed')
+            except Exception:
+                pass
+
+            # Show success indicator
+            AppState.show_success()
+            refresh_cart(e)
+            
+        except Exception as ex:
+            if conn: conn.rollback()
+            show_error(e.page, f"Update failed: {str(ex)}")
+        finally:
+            conn.close()
     
-    # Handle item removal
-    def remove_from_cart(cart_id, e):
+    # Handle item removal with stock restoration
+    def remove_from_cart(cart_id, medicine_id, quantity, e):
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM cart WHERE id = ?", (cart_id,))
-        conn.commit()
-        conn.close()
-
-        # Emit cart changed event to update badge across app
         try:
-            AppState.emit('cart_changed')
-        except Exception:
-            pass
+            # Restore the stock in medicines table
+            cursor.execute("UPDATE medicines SET stock = stock + ? WHERE id = ?", (quantity, medicine_id))
+            
+            # Delete from cart
+            cursor.execute("DELETE FROM cart WHERE id = ?", (cart_id,))
+            
+            conn.commit()
 
-        # Show success indicator
-        AppState.show_success()
-        show_success(e.page, ITEM_REMOVED.format("Item"))
-        refresh_cart(e)
+            # Emit cart changed event to update badge and sidebar
+            try:
+                AppState.emit('cart_changed')
+            except Exception:
+                pass
+
+            # Show success indicator
+            AppState.show_success()
+            show_success(e.page, ITEM_REMOVED.format("Item"))
+            refresh_cart(e)
+            
+        except Exception as ex:
+            if conn: conn.rollback()
+            show_error(e.page, f"Removal failed: {str(ex)}")
+        finally:
+            conn.close()
     
     # Display notification
     def show_snackbar(e, message, error=False):
@@ -124,7 +153,7 @@ def CartView():
             width=60,
             text_align=ft.TextAlign.CENTER,
             border_color="outline",
-            on_submit=lambda e: update_quantity(cart_id, medicine_id, int(e.control.value), stock, e)
+            on_submit=lambda e: update_quantity(cart_id, medicine_id, int(e.control.value), quantity, stock, e)
         )
         
         return ft.Container(
@@ -150,14 +179,14 @@ def CartView():
                         icon=ft.Icons.REMOVE,
                         icon_size=16,
                         icon_color="primary",
-                        on_click=lambda e: update_quantity(cart_id, medicine_id, quantity - 1, stock, e)
+                        on_click=lambda e: update_quantity(cart_id, medicine_id, quantity - 1, quantity, stock, e)
                     ),
                     quantity_field,
                     ft.IconButton(
                         icon=ft.Icons.ADD,
                         icon_size=16,
                         icon_color="primary",
-                        on_click=lambda e: update_quantity(cart_id, medicine_id, quantity + 1, stock, e)
+                        on_click=lambda e: update_quantity(cart_id, medicine_id, quantity + 1, quantity, stock, e)
                     ),
                 ], spacing=5),
                 # total price for this line
@@ -172,7 +201,7 @@ def CartView():
                     icon=ft.Icons.DELETE_OUTLINE,
                     icon_color="error",
                     tooltip="Remove from cart",
-                    on_click=lambda e: remove_from_cart(cart_id, e)
+                    on_click=lambda e: remove_from_cart(cart_id, medicine_id, quantity, e)
                 ),
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=15),
             padding=15,
@@ -212,13 +241,6 @@ def CartView():
                 quantity = item[4]
                 unit_price = item[3]
                 subtotal_item = unit_price * quantity
-
-                # Verify inventory availability
-                cursor.execute("SELECT stock FROM medicines WHERE id = ?", (medicine_id,))
-                current_stock = cursor.fetchone()[0]
-
-                if current_stock < quantity:
-                    raise Exception(f"Insufficient stock for {item[2]}")
 
                 # ✅ KEY FIX: Check if this medicine is from an APPROVED prescription
                 cursor.execute("""
@@ -261,12 +283,8 @@ def CartView():
                         VALUES (?, ?, ?, ?, ?, 0, NULL, NULL)
                     """, (order_id, medicine_id, quantity, unit_price, subtotal_item))
 
-                # Deduct applied inventory
-                cursor.execute("""
-                    UPDATE medicines
-                    SET stock = stock - ?
-                    WHERE id = ?
-                """, (quantity, medicine_id))
+                # Inventory deduction REMOVED from here because it's now handled in real-time
+                # when items are added to the cart or quantities are adjusted.
 
             # Clear processed cart
             cursor.execute("DELETE FROM cart WHERE patient_id = ?", (user_id,))

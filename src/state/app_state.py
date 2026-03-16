@@ -115,3 +115,8 @@ class AppState:
                     callback(*args, **kwargs)
                 except Exception:
                     pass
+
+    # Alias for emit_event
+    @staticmethod
+    def emit(event_name, *args, **kwargs):
+        AppState.emit_event(event_name, *args, **kwargs)

@@ -75,12 +75,26 @@ def ManageStock():
         on_change=lambda e: load_data(e)
     )
 
+    # Custom Table Row Helper (Proportional Stretching)
+    def create_table_row(cells, is_header=False):
+        return ft.Container(
+            padding=ft.padding.symmetric(horizontal=20, vertical=12),
+            bgcolor="surfaceVariant" if is_header else None,
+            border=ft.border.only(bottom=ft.border.BorderSide(1, "outlineVariant")) if not is_header else None,
+            content=ft.Row([
+                ft.Container(cells[0], expand=1),   # ID
+                ft.Container(cells[1], expand=6),   # Name
+                ft.Container(cells[2], expand=3),   # Category
+                ft.Container(cells[3], expand=2.5), # Price
+                ft.Container(cells[4], expand=2.5), # Stock
+                ft.Container(cells[5], expand=3),   # Expiry
+                ft.Container(cells[6], expand=3),   # Supplier
+                ft.Container(cells[7], expand=2, alignment=ft.alignment.center_right), # Actions
+            ], alignment=ft.MainAxisAlignment.START, spacing=20)
+        )
+
     # Modal Form Fields
-    
-    # Medicine Name Field
     name_input = create_input("Medicine Name", ft.Icons.MEDICATION)
-    
-    # Category Selection Field
     category_input = ft.Dropdown(
         label="Category",
         options=category_filter.options[1:], 
@@ -88,36 +102,26 @@ def ManageStock():
         border_color="outline",
         focused_border_color="primary",
     )
-    
-    # Pricing and Inventory Quantities
     price_input = create_input("Price (PHP)", None, numeric=True, in_row=True)
     stock_input = create_input("Stock Qty", None, numeric=True, in_row=True)
-    
-    # Expiry and Supply Chain Details
     expiry_input = create_input("Expiry (YYYY-MM-DD)", ft.Icons.CALENDAR_TODAY)
     supplier_input = create_input("Supplier", ft.Icons.LOCAL_SHIPPING)
 
-    # Core DataGrid Configuration
-    stock_table = ft.DataTable(
-        border=ft.border.all(1, "outline"),
-        border_radius=10,
-        vertical_lines=ft.border.BorderSide(1, "outlineVariant"),
-        heading_row_color="surfaceVariant",
-        columns=[
-            ft.DataColumn(ft.Text("ID")),
-            ft.DataColumn(ft.Text("Name")),
-            ft.DataColumn(ft.Text("Category")),
-            ft.DataColumn(ft.Text("Price"), numeric=True),
-            ft.DataColumn(ft.Text("Stock"), numeric=True),
-            ft.DataColumn(ft.Text("Expiry")),
-            ft.DataColumn(ft.Text("Supplier")),
-            ft.DataColumn(ft.Text("Actions")),
-        ],
-        rows=[],
-        expand=True
-    )
+    # Core Table Components
+    table_header = create_table_row([
+        ft.Text("ID", weight="bold"),
+        ft.Text("Name", weight="bold"),
+        ft.Text("Category", weight="bold"),
+        ft.Text("Price", weight="bold"),
+        ft.Text("Stock", weight="bold"),
+        ft.Text("Expiry", weight="bold"),
+        ft.Text("Supplier", weight="bold"),
+        ft.Text("Actions", weight="bold", text_align=ft.TextAlign.RIGHT),
+    ], is_header=True)
+
+    stock_list = ft.ListView(expand=True, spacing=0)
     
-    # Empty state container (will be shown when no data)
+    # Empty state container
     empty_state = ft.Container(
         content=ft.Column([
             ft.Icon(ft.Icons.INVENTORY_2_OUTLINED, size=100, color="outline"),
@@ -129,13 +133,13 @@ def ManageStock():
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
         padding=80,
         alignment=ft.alignment.center,
-        visible=False,  # Initially hidden
+        visible=False,
         expand=True,
     )
     
-    # Container that will hold either the table or empty state
-    table_container = ft.Container(
-        content=ft.Row([stock_table], expand=True, scroll=ft.ScrollMode.AUTO),
+    # Main container for the scrolling list
+    table_body_container = ft.Container(
+        content=stock_list,
         padding=0,
         expand=True
     )
@@ -171,241 +175,150 @@ def ManageStock():
         meds = cursor.fetchall()
         conn.close()
 
-        stock_table.rows.clear()
+        stock_list.controls.clear()
 
-        low_stock_meds = []
-        out_of_stock_meds = []
-
-        # Show empty state when no medicines found
         if not meds:
-            page = e.page if e else stock_table.page
-            
-            # If filters are applied but no results - show info toast
-            if search_txt.value or category_filter.value != "All" or stock_filter.value != "All":
-                if page:
-                    show_info(page, "No medicine found matching your search criteria.")
-                # Show table (even if empty) when filters are active
-                table_container.visible = True
+            page = e.page if e else (stock_list.page if stock_list.page else None)
+            if (search_txt.value or category_filter.value != "All" or stock_filter.value != "All") and page:
+                show_info(page, "No medicine found matching your search criteria.")
+                table_body_container.visible = True
                 empty_state.visible = False
             else:
-                # No medicines in database at all - show get started message
-                table_container.visible = False
+                table_body_container.visible = False
                 empty_state.visible = True
             
-            if stock_table.page:
-                stock_table.update()
-                table_container.update()
+            if stock_list.page:
+                table_body_container.update()
                 empty_state.update()
             return
         
-        # We have medicines - show table, hide empty state
-        table_container.visible = True
+        table_body_container.visible = True
         empty_state.visible = False
 
         for m in meds:
             if m['stock'] == 0:
                 stock_color = "error"
-                out_of_stock_meds.append(m['name'])
             elif m['stock'] < 10:
                 stock_color = "orange"
-                low_stock_meds.append((m['name'], m['stock']))
             else:
                 stock_color = "primary"
 
-            stock_table.rows.append(
-                ft.DataRow(cells=[
-                    ft.DataCell(ft.Text(str(m['id']))),
-                    ft.DataCell(ft.Text(m['name'], weight="bold")),
-                    ft.DataCell(ft.Text(m['category'])),
-                    ft.DataCell(ft.Text(f"₱{m['price']:.2f}")),
-                    ft.DataCell(ft.Text(str(m['stock']), color=stock_color, weight="bold")),
-                    ft.DataCell(ft.Text(m['expiry_date'])),
-                    ft.DataCell(ft.Text(m['supplier'] or "N/A")),
-                    ft.DataCell(ft.Row([
+            stock_list.controls.append(
+                create_table_row([
+                    ft.Text(str(m['id'])),
+                    ft.Text(m['name'], weight="bold"),
+                    ft.Text(m['category']),
+                    ft.Text(f"₱{m['price']:.2f}"),
+                    ft.Text(str(m['stock']), color=stock_color, weight="bold"),
+                    ft.Text(m['expiry_date']),
+                    ft.Text(m['supplier'] or "N/A"),
+                    ft.Row([
                         ft.IconButton(
                             icon=ft.Icons.EDIT,
+                            icon_size=18,
                             icon_color="primary",
                             tooltip="Edit",
                             on_click=lambda e, med=m: open_edit_dialog(e, med)
                         ),
                         ft.IconButton(
                             icon=ft.Icons.DELETE,
+                            icon_size=18,
                             icon_color="error",
                             tooltip="Delete",
                             on_click=lambda e, mid=m['id']: prompt_delete(e, mid)
                         ),
-                    ])),
+                    ], spacing=0, alignment=ft.MainAxisAlignment.END),
                 ])
             )
 
-        if stock_table.page:
-            stock_table.update()
-            table_container.update()
+        if stock_list.page:
+            table_body_container.update()
             empty_state.update()
 
-    # Modal Operation Handlers
-
+    # Modal Operation Handlers (keeping original logic)
     def open_add_dialog(e):
         nonlocal selected_medicine_id
         selected_medicine_id = None 
-        
-        name_input.value = ""
-        category_input.value = None
-        price_input.value = ""
-        stock_input.value = ""
-        expiry_input.value = ""
-        supplier_input.value = ""
-        
+        name_input.value = ""; category_input.value = None
+        price_input.value = ""; stock_input.value = ""
+        expiry_input.value = ""; supplier_input.value = ""
         dialog.title = ft.Row([ft.Icon(ft.Icons.ADD_BOX, color="primary"), ft.Text("Add New Medicine")])
         e.page.open(dialog)
 
     def open_edit_dialog(e, med):
         nonlocal selected_medicine_id
         selected_medicine_id = med['id'] 
-        
-        name_input.value = med['name']
-        category_input.value = med['category']
-        price_input.value = str(med['price'])
-        stock_input.value = str(med['stock'])
-        expiry_input.value = med['expiry_date']
-        supplier_input.value = med['supplier']
-        
+        name_input.value = med['name']; category_input.value = med['category']
+        price_input.value = str(med['price']); stock_input.value = str(med['stock'])
+        expiry_input.value = med['expiry_date']; supplier_input.value = med['supplier']
         dialog.title = ft.Row([ft.Icon(ft.Icons.EDIT, color="primary"), ft.Text("Edit Medicine")])
         e.page.open(dialog)
 
     def save_medicine(e):
         if not name_input.value or not price_input.value or not stock_input.value:
-            show_error(e.page, REQUIRED_FIELDS)
-            e.page.update()
-            return
-
+            show_error(e.page, REQUIRED_FIELDS); e.page.update(); return
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-
+            conn = get_db_connection(); cursor = conn.cursor()
             if selected_medicine_id is None:
-                cursor.execute("""
-                    INSERT INTO medicines (name, category, price, stock, expiry_date, supplier)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    name_input.value, category_input.value, float(price_input.value),
-                    int(stock_input.value), expiry_input.value, supplier_input.value
-                ))
+                cursor.execute("INSERT INTO medicines (name, category, price, stock, expiry_date, supplier) VALUES (?, ?, ?, ?, ?, ?)", 
+                    (name_input.value, category_input.value, float(price_input.value), int(stock_input.value), expiry_input.value, supplier_input.value))
                 msg = CREATE_SUCCESS.format(name_input.value)
             else:
-                cursor.execute("""
-                    UPDATE medicines
-                    SET name=?, category=?, price=?, stock=?, expiry_date=?, supplier=?
-                    WHERE id=?
-                """, (
-                    name_input.value, category_input.value, float(price_input.value),
-                    int(stock_input.value), expiry_input.value, supplier_input.value,
-                    selected_medicine_id
-                ))
+                cursor.execute("UPDATE medicines SET name=?, category=?, price=?, stock=?, expiry_date=?, supplier=? WHERE id=?",
+                    (name_input.value, category_input.value, float(price_input.value), int(stock_input.value), expiry_input.value, supplier_input.value, selected_medicine_id))
                 msg = UPDATE_SUCCESS.format(name_input.value)
-
-            conn.commit()
-            conn.close()
-
-            e.page.close(dialog)
-            load_data()
-            show_success(e.page, msg)
-            e.page.update()
-
-        except Exception as ex:
-            show_error(e.page, f"Error: {str(ex)}")
-            e.page.update()
+            conn.commit(); conn.close(); e.page.close(dialog); load_data(); show_success(e.page, msg); e.page.update()
+        except Exception as ex: show_error(e.page, f"Error: {str(ex)}"); e.page.update()
 
     def prompt_delete(e, med_id):
-        nonlocal medicine_to_delete
-        medicine_to_delete = med_id 
-        e.page.open(del_dialog)
+        nonlocal medicine_to_delete; medicine_to_delete = med_id; e.page.open(del_dialog)
 
     def confirm_delete_action(e):
         if medicine_to_delete is None: return
-        conn = get_db_connection()
-        conn.execute("DELETE FROM medicines WHERE id = ?", (medicine_to_delete,))
-        conn.commit()
-        conn.close()
-        e.page.close(del_dialog)
-        load_data()
-        show_success(e.page, DELETE_SUCCESS.format("Medicine"))
-        e.page.update()
+        conn = get_db_connection(); conn.execute("DELETE FROM medicines WHERE id = ?", (medicine_to_delete,)); conn.commit(); conn.close()
+        e.page.close(del_dialog); load_data(); show_success(e.page, DELETE_SUCCESS.format("Medicine")); e.page.update()
 
     # Modal Definitions
-    
-    # Edit/Create Medicine Modal
-    dialog = ft.AlertDialog(
-        bgcolor="surface",
-        content=ft.Container(
-            width=500,
-            content=ft.Column([
-                name_input,
-                ft.Container(height=5),
-                category_input,
-                ft.Container(height=5),
-                ft.Row([price_input, stock_input], spacing=15),
-                ft.Container(height=5),
-                expiry_input,
-                ft.Container(height=5),
-                supplier_input
-            ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH) 
-        ),
-        actions=[
-            ft.TextButton("Cancel", on_click=lambda e: e.page.close(dialog)),
-            ft.ElevatedButton("Save", bgcolor="primary", color="onPrimary", on_click=save_medicine),
-        ]
-    )
+    dialog = ft.AlertDialog(bgcolor="surface", content=ft.Container(width=500, content=ft.Column([
+        name_input, ft.Container(height=5), category_input, ft.Container(height=5),
+        ft.Row([price_input, stock_input], spacing=15), ft.Container(height=5), expiry_input,
+        ft.Container(height=5), supplier_input], tight=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
+        actions=[ft.TextButton("Cancel", on_click=lambda e: e.page.close(dialog)), ft.ElevatedButton("Save", bgcolor="primary", color="onPrimary", on_click=save_medicine)])
 
-    # Delete Confirmation Modal
-    del_dialog = ft.AlertDialog(
-        bgcolor="surface",
-        title=ft.Text("Confirm Delete"),
-        content=ft.Text("Are you sure you want to delete this medicine?"),
-        actions=[
-            ft.TextButton("Cancel", on_click=lambda e: e.page.close(del_dialog)),
-            ft.ElevatedButton("Delete", bgcolor="error", color="white", on_click=confirm_delete_action),
-        ]
-    )
+    del_dialog = ft.AlertDialog(bgcolor="surface", title=ft.Text("Confirm Delete"), content=ft.Text("Are you sure you want to delete this medicine?"),
+        actions=[ft.TextButton("Cancel", on_click=lambda e: e.page.close(del_dialog)), ft.ElevatedButton("Delete", bgcolor="error", color="white", on_click=confirm_delete_action)])
 
-    class FakePage:
-        def update(self): pass
     load_data()
 
     # Main View Assembly
     return ft.Column([
         ft.Row([
             ft.Text("Stock Management", size=28, weight="bold"),
-            ft.ElevatedButton(
-                "Add Medicine", 
-                icon=ft.Icons.ADD, 
-                bgcolor="primary", 
-                color="onPrimary", 
-                on_click=open_add_dialog
-            ),
+            ft.ElevatedButton("Add Medicine", icon=ft.Icons.ADD, bgcolor="primary", color="onPrimary", on_click=open_add_dialog),
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
         
         ft.Container(height=10),
         
         ft.Container(
             content=ft.Row([
-                search_txt,
-                category_filter,
-                stock_filter,
+                search_txt, category_filter, stock_filter,
                 ft.IconButton(icon=ft.Icons.SEARCH, icon_color="primary", on_click=lambda e: load_data(e))
             ], spacing=10, expand=True),
-            padding=15,
-            bgcolor="surfaceVariant",
-            border_radius=10,
-            expand=False
+            padding=15, bgcolor="surfaceVariant", border_radius=10,
         ),
         
         ft.Container(height=20),
         
-        # Stack with both table and empty state
-        ft.Stack([
-            table_container,
-            empty_state,
-        ], expand=True),
+        # Responsive Custom Table Box
+        ft.Container(
+            content=ft.Column([
+                table_header,
+                ft.Stack([table_body_container, empty_state], expand=True),
+            ], spacing=0, expand=True),
+            border=ft.border.all(1, "outline"),
+            border_radius=10,
+            expand=True,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS 
+        ),
         
-    ], scroll=ft.ScrollMode.AUTO, expand=True)
+    ], scroll=ft.ScrollMode.AUTO, expand=True, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)

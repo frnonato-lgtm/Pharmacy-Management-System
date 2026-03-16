@@ -132,6 +132,12 @@ class AppLayout(ft.Row):
 
         self.controls = [self.rail, ft.VerticalDivider(width=1), self.content_area]
 
+        # Register for cart count updates
+        def on_cart_changed(*args, **kwargs):
+            self.update_cart_count()
+        
+        AppState.add_listener("cart_changed", on_cart_changed)
+
     # Infer modular destinations per role authorizations
     def get_destinations(self):
         user = AppState.get_user()
