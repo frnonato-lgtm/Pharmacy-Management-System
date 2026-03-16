@@ -1,4 +1,4 @@
-"""Billing Clerk profile and settings view."""
+"""Billing profile and settings view."""
 
 import flet as ft
 from state.app_state import AppState
@@ -6,7 +6,7 @@ from services.database import get_db_connection
 from utils.notifications import show_success, show_error
 
 def BillingProfileView():
-    """Billing Clerk profile and account settings."""
+    """Billing profile and account settings."""
     
     user = AppState.get_user()
     
@@ -55,6 +55,7 @@ def BillingProfileView():
                 label=label,
                 value=val if val and val != "Not provided" else "",
                 prefix_icon=icon,
+                multiline=multiline,
                 width=None,
                 expand=True,
                 border_color="primary",
@@ -85,18 +86,21 @@ def BillingProfileView():
                 ))
                 conn.commit()
                 
+                # Update local session state
                 user_data['full_name'] = full_name_field.value
                 user_data['email'] = email_field.value
                 user_data['phone'] = phone_field.value
                 user_data['dob'] = dob_field.value
                 user_data['address'] = address_field.value
                 
+                # Refresh UI components
                 txt_name_header.value = get_display_name()
                 txt_email.value = email_field.value or "Not provided"
                 txt_phone.value = phone_field.value or "Not provided"
                 txt_dob.value = dob_field.value or "Not provided"
                 txt_address.value = address_field.value or "Not provided"
-
+                
+                # Synchronize global application state
                 user['full_name'] = full_name_field.value
                 AppState.set_user(user)
 
@@ -271,29 +275,18 @@ def BillingProfileView():
         
         ft.Container(height=20),
         
-        ft.Text("Contact Information", size=20, weight="bold"),
+        ft.Text("Account Details", size=20, weight="bold"),
         ft.Container(height=10),
         
-        # Contact information grid
         # Contact information grid - 2x2 layout
         ft.Row([
             ft.Column([
                 create_info_row("Email", txt_email, ft.Icons.EMAIL),
-            ], spacing=10, expand=True),
-            
-            ft.Column([
-                create_info_row("Phone", txt_phone, ft.Icons.PHONE),
-            ], spacing=10, expand=True),
-        ], spacing=15),
-
-        ft.Container(height=10),
-
-        ft.Row([
-            ft.Column([
                 create_info_row("Date of Birth", txt_dob, ft.Icons.CAKE),
             ], spacing=10, expand=True),
             
             ft.Column([
+                create_info_row("Phone", txt_phone, ft.Icons.PHONE),
                 create_info_row("Address", txt_address, ft.Icons.HOME),
             ], spacing=10, expand=True),
         ], spacing=15),

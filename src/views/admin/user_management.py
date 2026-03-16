@@ -11,7 +11,8 @@ def UserManagement():
     users_container = ft.Column(spacing=10)
     
     search_field = ft.TextField(
-        hint_text="Search users...",
+        label="Search Users",
+        hint_text="Search by username or name...",
         prefix_icon=ft.Icons.SEARCH,
         border_color="primary", 
         width=300,
@@ -446,6 +447,7 @@ def UserManagement():
         ft.Row([
             search_field,
             role_filter,
+            status_filter,
             ft.ElevatedButton(
                 "Search",
                 icon=ft.Icons.SEARCH,
@@ -460,18 +462,7 @@ def UserManagement():
                 color="white",
                 on_click=add_user,
             ),
-        ], spacing=10, wrap=True),
-
-        ft.Row([
-            status_filter,
-            ft.ElevatedButton(
-                "Apply Filters",
-                icon=ft.Icons.FILTER_LIST,
-                bgcolor="primary",
-                color="white",
-                on_click=load_users,
-            ),
-        ], spacing=10),
+        ], spacing=10, run_spacing=10, wrap=True),
         
         ft.Container(height=20),
         
