@@ -140,7 +140,6 @@ def main(page: ft.Page):
             elif troute == "/billing/invoices": content = InvoicesListView()
             elif troute == "/billing/payments": content = PaymentHistoryView()
             elif troute == "/billing/reports" : content = BillingReportsView()
-            elif troute == "/billing/invoices": content = InvoicesDetailView()
             elif troute == "/billing/profile": content = BillingProfileView()
             elif troute.startswith("/billing/invoice/"):
                 inv_id = troute.split("/")[-1]
@@ -190,6 +189,13 @@ def main(page: ft.Page):
     page.go("/")
 
 if __name__ == "__main__":
+    import os
+    # Render specifically requires binding to 0.0.0.0 and listening on the $PORT environment variable
+    app_port = int(os.environ.get("PORT", 8550))
+    app_host = "0.0.0.0" if "PORT" in os.environ else "localhost"
+    
     # Initialize OAuth callback listener
-    start_callback_server(port=8551)
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8550)
+    callback_port = int(os.environ.get("CALLBACK_PORT", 8551))
+    start_callback_server(port=callback_port)
+    
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=app_port, host=app_host)

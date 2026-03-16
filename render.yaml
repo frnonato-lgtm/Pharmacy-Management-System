@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: pharmacy-management-system
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python src/main.py
+    envVars:
+      - key: PORT
+        value: 8550
+      - key: CALLBACK_PORT
+        value: 8551
+      - key: HOST
+        value: 0.0.0.0
+      - key: ROOT_URL
+        sync: false # User must provide this, e.g., https://pharma-pms.onrender.com
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

@@ -24,7 +24,11 @@ if _env_path.exists():
 # Google OAuth Configuration Parameters
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-REDIRECT_URI = "http://localhost:8551/callback"
+
+# Dynamic Redirect URI for Deployment (e.g., Render)
+# ROOT_URL should be the public URL of your app (e.g., https://pharma-pms.onrender.com)
+ROOT_URL = os.environ.get("ROOT_URL", "http://localhost:8551")
+REDIRECT_URI = f"{ROOT_URL}/callback"
 SCOPES = "openid email profile"
 
 AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
