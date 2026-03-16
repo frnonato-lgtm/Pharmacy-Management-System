@@ -3,6 +3,12 @@ import os
 import json
 import urllib.request
 
+class LibsqlError(Exception):
+    pass
+
+class LibsqlOperationalError(LibsqlError):
+    pass
+
 # Custom Turso Client (No external dependencies, 3.14 compatible)
 class LibsqlRow:
     def __init__(self, columns, values):
@@ -16,9 +22,10 @@ class LibsqlRow:
 class LibsqlCursor:
     def __init__(self, conn):
         self.conn = conn
-        self.result_rows = []
-        self.columns = []
         self.index = 0
+        self.rowcount = -1
+        self.columns = []
+        self.result_rows = []
     
     def execute(self, sql, params=()):
         # Convert params to Turso format
@@ -40,12 +47,33 @@ class LibsqlCursor:
 
         with urllib.request.urlopen(req) as res:
             data = json.loads(res.read().decode("utf-8"))
-            exec_res = data["results"][0]["response"]["result"]
+            result_item = data["results"][0]
+            
+            if result_item["type"] == "error":
+                message = result_item["error"]["message"]
+                # Mimic sqlite3 OperationalError for common schema issues
+                if "duplicate column name" in message.lower() or "already exists" in message.lower():
+                    raise LibsqlOperationalError(message)
+                raise LibsqlError(message)
+
+            exec_res = result_item["response"]["result"]
             self.columns = [c["name"] for c in exec_res["cols"]]
             self.rowcount = exec_res.get("affected_row_count", 0)
             self.result_rows = []
             for r in exec_res["rows"]:
-                self.result_rows.append([v.get("value") for v in r])
+                processed_row = []
+                for v in r:
+                    val_type = v.get("type")
+                    val_data = v.get("value")
+                    if val_type == "integer" and val_data is not None:
+                        processed_row.append(int(val_data))
+                    elif val_type == "float" and val_data is not None:
+                        processed_row.append(float(val_data))
+                    elif val_type == "null":
+                        processed_row.append(None)
+                    else:
+                        processed_row.append(val_data)
+                self.result_rows.append(processed_row)
             self.index = 0
         return self
 
@@ -73,7 +101,7 @@ class LibsqlConnection:
             api_url = f"{api_url.rstrip('/')}/v2/pipeline"
         self.api_url = api_url
         self.token = token
-        self.row_factory = None
+        self.row_factory = sqlite3.Row
     def cursor(self): return LibsqlCursor(self)
     def commit(self): pass
     def close(self): pass
@@ -130,7 +158,7 @@ def init_db():
     # Legacy schema migration for status column
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'Pending'")
-    except sqlite3.OperationalError:
+    except (sqlite3.OperationalError, LibsqlOperationalError):
         pass # Column already defined
 
     # Schema: Medicines

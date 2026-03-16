@@ -230,4 +230,4 @@ if __name__ == "__main__":
     callback_port = int(os.environ.get("CALLBACK_PORT", 8551))
     start_callback_server(port=callback_port)
     
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=app_port, host=app_host)
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=app_port, host=app_host)
