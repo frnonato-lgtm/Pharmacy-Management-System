@@ -20,33 +20,27 @@ Built using **Python** and **Flet** (Flutter for Python), the system features a 
 
 ## What's New in V2.0 (Showcase-Ready)
 
-### 1. Robustness & Reliability (The "No-Crash" Rule)
-*   **Input Validation:** Strict constraints on text fields, dropdowns, and uploads.
-*   **Graceful Error Handling:** Console errors replaced with user-friendly Toast notifications.
-*   **Edge Case Testing:** Dashboards and lists now handle "zero data" states gracefully.
-*   **Loading Indicators:** Visual progress feedback for deletions and long-running actions.
-*   **Duplicate Accounts Prevention:** Validation for unique Username, Email, and Full Name.
-*   **Revenue Algorithm Fixes:** Reports now correctly filter out pending and cancelled orders.
+1. **Robustness & Reliability (The "No-Crash" Rule)**
+   - **Input Validation:** Strict constraints on all text fields, dropdowns, and upload buttons to prevent empty or invalid submissions.
+   - **Graceful Error Handling:** Console errors replaced with user-friendly "Toast" notifications and modals for intuitive feedback.
+   - **Edge Case Testing:** Dashboards and lists handle "empty states" (zero data) gracefully without crashing.
+   - **Loading Indicators:** Visual progress feedback added to all actions that take longer than 300ms, specifically for deletions and process updates.
 
-### 2. User Experience (UX) & Polish
-*   **Navigation Refinement:** Added "Return/Go Back" paths to all user dashboards.
-*   **UI Consistency:** Standardized margins, fonts, and button styles across all views.
-*   **Responsive Design:** Application elements now adapt to various resolutions and window sizes.
-*   **Header & Branding:** Implementation of the PharmaOps logo and improved header placement.
-*   **Clean Interface:** Simplified landing page with role-based login selection.
+2. **User Experience (UX) & Polish**
+   - **Navigation Refinement:** Integrated "Return/Go Back" paths and dashboard refreshing to ensure users never feel "stuck."
+   - **UI Consistency:** Standardized margins, font sizes, and button styles with a consistent Teal-themed color palette.
+   - **Responsive Design:** Adaptive layout implementation ensuring the application scales correctly across various window sizes.
 
-### 3. Feature Depth (The "V2.0" Additions)
-*   **Search & Filter:** Real-time search bars and multi-option filtering for medicines and logs.
-*   **Data Persistence:** Secure SQLite storage with hashed/encrypted sensitive information.
-*   **Authentication:** "Sign in with Google" integration for secure session handling.
-*   **Audit Trail:** Comprehensive activity logs for auditing critical system actions.
-*   **Notification System:** Red badges for carts and notification text for order counts.
-*   **Profile Settings:** Dedicated Setting UI for all roles to manage personal information.
-*   **Pharmacist Controls:** Refined Reject/Approve logic for prescription validation.
+3. **Feature Depth (The "V2.0" Additions)**
+   - **Search & Filter:** Real-time search bars and multi-option filtering for medicines, logs, and patient records.
+   - **Data Persistence:** Persistent SQLite database storage with hashed/encrypted sensitive information for security.
+   - **User Feedback:** Dynamic "Success" states and notifications whenever a user completes an action.
+   - **Authentication:** Unified Google OAuth integration for secure "Sign in with Google" sessions.
 
-### 4. Developer Quality & Documentation
-*   **Code Cleanup:** Removed dead code, unused variables, and console logs.
-*   **README Overhaul:** Addition of setup guides and V2.0 details.
+4. **Developer Quality & Documentation**
+   - **Code Cleanup:** Comprehensive removal of all console logs, dead code, and unused variables for production readiness.
+   - **README Overhaul:** Addition of detailed setup instructions and V2.0 feature descriptions.
+   - **Deployment:** Ready for local deployment with structured documentation for easy setup and review.
 
 ---
 
