@@ -102,6 +102,59 @@ def init_db():
         )
     ''')
 
+    # Schema: Cart
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cart (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            medicine_id INTEGER NOT NULL,
+            quantity INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (patient_id) REFERENCES users(id),
+            FOREIGN KEY (medicine_id) REFERENCES medicines(id)
+        )
+    ''')
+
+    # Schema: Orders
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            patient_id INTEGER NOT NULL,
+            order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'Pending',
+            total_amount REAL NOT NULL,
+            payment_method TEXT,
+            notes TEXT,
+            FOREIGN KEY (patient_id) REFERENCES users(id)
+        )
+    ''')
+
+    # Schema: Order Items
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS order_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            medicine_id INTEGER NOT NULL,
+            quantity INTEGER NOT NULL,
+            unit_price REAL NOT NULL,
+            subtotal REAL NOT NULL,
+            FOREIGN KEY (order_id) REFERENCES orders(id),
+            FOREIGN KEY (medicine_id) REFERENCES medicines(id)
+        )
+    ''')
+
+    # Schema: Activity Log
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            user_id INTEGER,
+            action TEXT NOT NULL,
+            details TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+
     # Provision default system accounts
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cursor.fetchone():

@@ -68,115 +68,147 @@ def main(page: ft.Page):
     init_db()
 
     def route_change(route):
-        page.views.clear()
-        
-        # Helper for view creation
-        def create_view(route_path, controls, scroll_mode=ft.ScrollMode.AUTO):
-            return ft.View(route_path, controls, padding=0, scroll=scroll_mode)
-
-        troute = page.route
-
-        # Public Landing Route
-        if troute == "/":
-            page.views.append(create_view("/", [ft.Container(content=LandingPage(page), expand=True)], None))
-
-        # Authenticated Routes
-        else:
-            user = AppState.get_user()
-            if not user:
-                page.go("/")
-                return
-
-            content = ft.Text("Not Found")
+        try:
+            page.views.clear()
             
-            # Role-Specific Dashboards
-            if troute == "/dashboard":
-                role = user['role']
-                if role == "Patient": content = PatientDashboard()
-                elif role == "Pharmacist": content = PharmacistDashboard()
-                elif role == "Inventory": content = InventoryDashboard()
-                elif role == "Billing": content = BillingDashboard()
-                elif role == "Admin": content = AdminDashboard()
-                elif role == "Staff": content = StaffDashboard()
-                else: content = ft.Text(f"Welcome {user['full_name']}")
+            # Helper for view creation
+            def create_view(route_path, controls, scroll_mode=ft.ScrollMode.AUTO):
+                return ft.View(route_path, controls, padding=0, scroll=scroll_mode)
 
-            # Patient Component Routes
-            elif troute == "/patient/search": content = MedicineSearch()
-            elif troute == "/patient/cart": content = CartView()
-            elif troute == "/patient/orders": content = OrdersView()
-            elif troute == "/patient/profile": content = ProfileView()
-            elif troute == "/patient/prescriptions" : content = PatientPrescriptionsView()
-            elif troute == "/patient/invoices": content = PatientInvoicesView()
-            elif troute.startswith("/patient/invoice/"):
-                inv_id = troute.split("/")[-1]
-                try:
-                    inv_id = int(inv_id)
-                    content = InvoiceDetailView(inv_id)
-                except (ValueError, IndexError):
-                    page.go("/patient/invoices")
-                    return
-            
-            # Pharmacist Component Routes
-            elif troute == "/pharmacist/prescriptions": content = PharmacistPrescriptionsView()
-            elif troute == "/pharmacist/reports": content = PharmacistReportsView() 
-            elif troute == "/pharmacist/medicines": content = PharmacistMedicineSearch()
-            elif troute == "/pharmacist/profile": content = PharmacistProfileView()
-            elif troute.startswith("/pharmacist/prescription/"):
-                rx_id = troute.split("/")[-1]
-                try:
-                    rx_id = int(rx_id)
-                    content = PrescriptionDetailView(rx_id)
-                except (ValueError, IndexError):
-                    # Handle invalid prescription ID identifier
-                    page.go("/pharmacist/prescriptions")
+            troute = page.route
+
+            # Public Landing Route
+            if troute == "/":
+                page.views.append(create_view("/", [ft.Container(content=LandingPage(page), expand=True)], None))
+
+            # Authenticated Routes
+            else:
+                user = AppState.get_user()
+                if not user:
+                    page.go("/")
                     return
 
-            # Inventory Component Routes
-            elif troute == "/inventory/stock": content = ManageStock()
-            elif troute == "/inventory/profile": content = InventoryProfileView()
-
-            # Billing Component Routes
-            elif troute == "/billing/create-invoice": content = CreateInvoicesView()
-            elif troute == "/billing/invoices": content = InvoicesListView()
-            elif troute == "/billing/payments": content = PaymentHistoryView()
-            elif troute == "/billing/reports" : content = BillingReportsView()
-            elif troute == "/billing/profile": content = BillingProfileView()
-            elif troute.startswith("/billing/invoice/"):
-                inv_id = troute.split("/")[-1]
-                try:
-                    inv_id = int(inv_id)
-                    content = InvoiceDetailView(inv_id)
-                except (ValueError, IndexError):
-                    page.go("/billing/invoices")
-                    return
-                    
-            # Administrator Component Routes
-            elif troute == "/admin/users": content = UserManagement()
-            elif troute == "/admin/reports": content = AdminReportsView()
-            elif troute == "/admin/logs": content = SystemLogs()
-
-            # Staff Component Routes
-            elif troute == "/staff/search": content = StaffPatientSearch()
-            elif troute == "/staff/patients": content = AllPatientsView() 
-            elif troute == "/staff/orders": content = StaffOrderTracking()
-            elif troute == "/staff/help": content = HelpDeskView()
-            elif troute == "/staff/profile": content = StaffProfileView()
-            # Dynamic Patient Detail Routing
-            elif troute.startswith("/staff/patient/"):
-                parts = troute.split("/")
+                content = ft.Text("Not Found")
                 
-                if len(parts) >= 4:
-                    patient_id = parts[3] 
-                    source = parts[4] if len(parts) > 4 else "search"
-                    
-                    content = StaffPatientDetail(patient_id, source)
-                else:
-                    page.go("/staff/search")
-                    return
+                # Role-Specific Dashboards
+                if troute == "/dashboard":
+                    role = user['role']
+                    if role == "Patient": content = PatientDashboard()
+                    elif role == "Pharmacist": content = PharmacistDashboard()
+                    elif role == "Inventory": content = InventoryDashboard()
+                    elif role == "Billing": content = BillingDashboard()
+                    elif role == "Admin": content = AdminDashboard()
+                    elif role == "Staff": content = StaffDashboard()
+                    else: content = ft.Text(f"Welcome {user['full_name']}")
 
-            page.views.append(create_view(troute, [AppLayout(page, content)], None))
-        
-        page.update()
+                # Patient Component Routes
+                elif troute == "/patient/search": content = MedicineSearch()
+                elif troute == "/patient/cart": content = CartView()
+                elif troute == "/patient/orders": content = OrdersView()
+                elif troute == "/patient/profile": content = ProfileView()
+                elif troute == "/patient/prescriptions" : content = PatientPrescriptionsView()
+                elif troute == "/patient/invoices": content = PatientInvoicesView()
+                elif troute.startswith("/patient/invoice/"):
+                    inv_id = troute.split("/")[-1]
+                    try:
+                        inv_id = int(inv_id)
+                        content = InvoiceDetailView(inv_id)
+                    except (ValueError, IndexError):
+                        page.go("/patient/invoices")
+                        return
+                
+                # Pharmacist Component Routes
+                elif troute == "/pharmacist/prescriptions": content = PharmacistPrescriptionsView()
+                elif troute == "/pharmacist/reports": content = PharmacistReportsView() 
+                elif troute == "/pharmacist/medicines": content = PharmacistMedicineSearch()
+                elif troute == "/pharmacist/profile": content = PharmacistProfileView()
+                elif troute.startswith("/pharmacist/prescription/"):
+                    rx_id = troute.split("/")[-1]
+                    try:
+                        rx_id = int(rx_id)
+                        content = PrescriptionDetailView(rx_id)
+                    except (ValueError, IndexError):
+                        # Handle invalid prescription ID identifier
+                        page.go("/pharmacist/prescriptions")
+                        return
+
+                # Inventory Component Routes
+                elif troute == "/inventory/stock": content = ManageStock()
+                elif troute == "/inventory/profile": content = InventoryProfileView()
+
+                # Billing Component Routes
+                elif troute == "/billing/create-invoice": content = CreateInvoicesView()
+                elif troute == "/billing/invoices": content = InvoicesListView()
+                elif troute == "/billing/payments": content = PaymentHistoryView()
+                elif troute == "/billing/reports" : content = BillingReportsView()
+                elif troute == "/billing/profile": content = BillingProfileView()
+                elif troute.startswith("/billing/invoice/"):
+                    inv_id = troute.split("/")[-1]
+                    try:
+                        inv_id = int(inv_id)
+                        content = InvoiceDetailView(inv_id)
+                    except (ValueError, IndexError):
+                        page.go("/billing/invoices")
+                        return
+                        
+                # Administrator Component Routes
+                elif troute == "/admin/users": content = UserManagement()
+                elif troute == "/admin/reports": content = AdminReportsView()
+                elif troute == "/admin/logs": content = SystemLogs()
+
+                # Staff Component Routes
+                elif troute == "/staff/search": content = StaffPatientSearch()
+                elif troute == "/staff/patients": content = AllPatientsView() 
+                elif troute == "/staff/orders": content = StaffOrderTracking()
+                elif troute == "/staff/help": content = HelpDeskView()
+                elif troute == "/staff/profile": content = StaffProfileView()
+                # Dynamic Patient Detail Routing
+                elif troute.startswith("/staff/patient/"):
+                    parts = troute.split("/")
+                    
+                    if len(parts) >= 4:
+                        patient_id = parts[3] 
+                        source = parts[4] if len(parts) > 4 else "search"
+                        
+                        content = StaffPatientDetail(patient_id, source)
+                    else:
+                        page.go("/staff/search")
+                        return
+
+                page.views.append(create_view(troute, [AppLayout(page, content)], None))
+            
+            page.update()
+        except Exception as e:
+            # Global error boundary to prevent blank white screen
+            import traceback
+            error_details = traceback.format_exc()
+            page.views.clear()
+            page.views.append(ft.View(
+                "/error",
+                [
+                    ft.AppBar(title=ft.Text("Application Error"), bgcolor="error"),
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Icon(ft.Icons.ERROR_OUTLINE, color="error", size=50),
+                            ft.Text("A critical error occurred while loading this view.", size=20, weight="bold"),
+                            ft.Text("Please report the following diagnostic information:", size=14, color="secondary"),
+                            ft.Container(
+                                content=ft.Text(error_details, font_family="monospace", size=12),
+                                bgcolor="surfaceVariant",
+                                padding=15,
+                                border_radius=8,
+                                border=ft.border.all(1, "outlineVariant"),
+                                scroll=ft.ScrollMode.AUTO,
+                                expand=True
+                            ),
+                            ft.ElevatedButton("Return to Login", on_click=lambda _: page.go("/"))
+                        ], spacing=20, expand=True),
+                        padding=40,
+                        expand=True
+                    )
+                ]
+            ))
+            page.update()
 
     def view_pop(view):
         page.views.pop()
