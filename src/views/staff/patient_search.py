@@ -13,7 +13,7 @@ def StaffPatientSearch():
     
     # Target search phrase input
     search_field = ft.TextField(
-        label="Search Patient",
+        label="Search Customer",
         hint_text="Enter name or phone number...",
         prefix_icon=ft.Icons.SEARCH,
         # Visual adjustments for layout consistency
@@ -42,7 +42,7 @@ def StaffPatientSearch():
                         ft.Text(f"ID: {patient['id']}", size=12, color="outline"),
                         # Role indicator
                         ft.Container(
-                            content=ft.Text("Patient", size=10, weight="bold", color="white"),
+                            content=ft.Text("Customer", size=10, weight="bold", color="white"),
                             bgcolor="primary",
                             padding=ft.padding.symmetric(horizontal=8, vertical=2),
                             border_radius=5,
@@ -118,7 +118,7 @@ def StaffPatientSearch():
                 # Empty result state
                 results_container.controls.append(
                     ft.Container(
-                        content=ft.Text("No patients found.", size=16, color="error"),
+                        content=ft.Text("No customers found.", size=16, color="error"),
                         alignment=ft.alignment.center,
                         padding=20
                     )
@@ -135,7 +135,7 @@ def StaffPatientSearch():
                         'email': row[6], 'phone': row[7], 'created_at': row[10] or "N/A"
                     }
                     results_container.controls.append(create_patient_card(p))
-                show_success(e.page, f"Found {len(rows)} patient(s).", duration=2)
+                show_success(e.page, f"Found {len(rows)} customer(s).", duration=2)
         except Exception as ex:
             show_error(e.page, SEARCH_ERROR)
             results_container.controls.append(
@@ -150,7 +150,7 @@ def StaffPatientSearch():
     
     # Overall View Construct
     return ft.Column([
-        NavigationHeader("Patient Search", "Find patient records quickly", show_back=False),
+        NavigationHeader("Customer Search", "Find customer records quickly", show_back=False),
         
         ft.Container(
             padding=20,

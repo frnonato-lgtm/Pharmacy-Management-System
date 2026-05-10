@@ -151,7 +151,7 @@ def AdminDashboard():
     for u in recent_users:
         activity_list.append(
             create_activity_item(
-                f"New {u[1]} registered",
+                f"New {'Customer' if u[1] == 'Patient' else u[1]} registered",
                 u[0],
                 u[2]
             )
@@ -211,7 +211,7 @@ def AdminDashboard():
                 total_users,
                 ft.Icons.PEOPLE,
                 "primary",
-                f"{total_patients} patients"
+                f"{total_patients} customers"
             ),
             create_stat_card(
                 "Total Medicines",

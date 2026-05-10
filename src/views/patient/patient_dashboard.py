@@ -13,7 +13,7 @@ def PatientDashboard():
         return ft.Text("Please log in first", color="error")
     
     user_id = user['id']
-    user_name = user['full_name'] if user.get('full_name') else "Patient"
+    user_name = user['full_name'] if user.get('full_name') else "Customer"
     
     # Fetch dashboard statistics from database
     conn = get_db_connection()

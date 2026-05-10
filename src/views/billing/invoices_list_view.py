@@ -58,7 +58,7 @@ def InvoicesListView():
     )
     
     search_field = ft.TextField(
-        hint_text="Search by invoice #, patient name...",
+        hint_text="Search by invoice #, customer name...",
         prefix_icon=ft.Icons.SEARCH,
         border_color="primary",
         expand=True,
@@ -132,7 +132,7 @@ def InvoicesListView():
                             ft.Icon(ft.Icons.RECEIPT, color="primary", size=20),
                             ft.Text(f"Invoice #{inv_number}", size=16, weight="bold"),
                         ], spacing=5),
-                        ft.Text(f"Patient: {patient_name} (ID: {patient_id})", size=13, color="outline"),
+                        ft.Text(f"Customer: {patient_name} (ID: {patient_id})", size=13, color="outline"),
                     ], spacing=2, expand=True),
                     ft.Container(
                         content=ft.Text(status, size=12, weight="bold", color="white"),
@@ -154,6 +154,10 @@ def InvoicesListView():
                         ft.Text("Tax (12%)", size=11, color="outline"),
                         ft.Text(f"₱{tax:,.2f}", size=14, weight="bold"),
                     ], spacing=2),
+                    ft.Column([
+                        ft.Text("Discount", size=11, color="outline"),
+                        ft.Text(f"-₱{discount:,.2f}", size=14, weight="bold", color="error"),
+                    ], spacing=2) if discount > 0 else ft.Container(),
                     ft.Column([
                         ft.Text("Total", size=11, color="outline"),
                         ft.Text(f"₱{total:,.2f}", size=16, weight="bold", color="primary"),

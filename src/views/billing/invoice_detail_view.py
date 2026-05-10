@@ -139,7 +139,7 @@ def InvoiceDetailView(invoice_id):
                         ft.Text("BILL TO:", size=12, weight="bold", color="outline"),
                         ft.Container(height=5),
                         ft.Text(patient_name or username, size=16, weight="bold"),
-                        ft.Text(f"Patient ID: {patient_id}", size=12, color="outline"),
+                        ft.Text(f"Customer ID: {patient_id}", size=12, color="outline"),
                         ft.Text(email or "john@gmail.com", size=12),
                         ft.Text(phone or "+63947565643321", size=12),
                         ft.Text(address or "San Miguel", size=12),

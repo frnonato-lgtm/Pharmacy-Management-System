@@ -139,6 +139,8 @@ def run_migration_and_seed():
                     pharmacy_notes TEXT,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     notes TEXT,
+                    discount_request TEXT,
+                    discount_verified INTEGER DEFAULT 0,
                     FOREIGN KEY (patient_id) REFERENCES users(id),
                     FOREIGN KEY (staff_id) REFERENCES users(id)
                 )
@@ -163,6 +165,14 @@ def run_migration_and_seed():
                 # Set default value for existing records
                 cursor.execute("UPDATE orders SET updated_at = order_date WHERE updated_at IS NULL")
                 print("✅ Added updated_at column to orders")
+            
+            if 'discount_request' not in orders_columns:
+                cursor.execute("ALTER TABLE orders ADD COLUMN discount_request TEXT")
+                print("✅ Added discount_request column to orders")
+            
+            if 'discount_verified' not in orders_columns:
+                cursor.execute("ALTER TABLE orders ADD COLUMN discount_verified INTEGER DEFAULT 0")
+                print("✅ Added discount_verified column to orders")
         
         # 4. Create order_items table
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='order_items'")

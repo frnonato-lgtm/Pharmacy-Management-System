@@ -101,7 +101,7 @@ def AllPatientsView():
         conn.close()
 
         if rows:
-            patients_container.controls.append(ft.Text(f"Total: {len(rows)} patients", color="outline"))
+            patients_container.controls.append(ft.Text(f"Total: {len(rows)} customers", color="outline"))
             for idx, row in enumerate(rows):
                 p = {
                     'id': row[0], 'full_name': row[4],
@@ -109,11 +109,11 @@ def AllPatientsView():
                 }
                 patients_container.controls.append(create_patient_row(p, idx))
             if e:
-                show_info(e.page, f"Loaded {len(rows)} patient(s).", duration=2)
+                show_info(e.page, f"Loaded {len(rows)} customer(s).", duration=2)
         else:
             patients_container.controls.append(
                 ft.Container(
-                    content=ft.Text("No patients found matching filter.", color="outline"),
+                    content=ft.Text("No customers found matching filter.", color="outline"),
                     alignment=ft.alignment.center,
                     padding=20
                 )
@@ -128,7 +128,7 @@ def AllPatientsView():
     
     # Interface Layout Configuration
     return ft.Column([
-        NavigationHeader("All Patients", "Full directory of registered patients", show_back=False),
+        NavigationHeader("All Customers", "Full directory of registered customers", show_back=False),
         
         ft.Container(
             padding=20,

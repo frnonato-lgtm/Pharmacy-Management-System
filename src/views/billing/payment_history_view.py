@@ -44,7 +44,7 @@ def PaymentHistoryView():
     )
     
     search_field = ft.TextField(
-        hint_text="Search by invoice #, patient name...", 
+        hint_text="Search by invoice #, customer name...", 
         prefix_icon=ft.Icons.SEARCH, 
         border_color="primary", # Apply theme border
         expand=True
@@ -112,7 +112,7 @@ def PaymentHistoryView():
                 ft.Divider(height=10),
                 
                 ft.Row([
-                    ft.Column([ft.Text("Patient", size=11, color="outline"), ft.Text(patient_name, size=14, weight="bold")], spacing=2),
+                    ft.Column([ft.Text("Customer", size=11, color="outline"), ft.Text(patient_name, size=14, weight="bold")], spacing=2),
                     ft.VerticalDivider(width=20),
                     ft.Column([ft.Text("Processed By", size=11, color="outline"), ft.Text(clerk_name or "System", size=14, weight="bold")], spacing=2),
                     ft.VerticalDivider(width=20),

@@ -16,6 +16,7 @@ from views.patient.orders_view import OrdersView
 from views.patient.profile_view import ProfileView
 from views.patient.prescription_view import PatientPrescriptionsView
 from views.patient.invoices_view import PatientInvoicesView
+from views.patient.pos_receipt import POSReceiptView
 
 from views.admin.admin_dashboard import AdminDashboard
 from views.admin.user_management import UserManagement
@@ -115,6 +116,14 @@ def main(page: ft.Page):
                 except (ValueError, IndexError):
                     page.go("/patient/invoices")
                     return
+            elif troute.startswith("/patient/pos_receipt/"):
+                order_id = troute.split("/")[-1]
+                try:
+                    order_id = int(order_id)
+                    content = POSReceiptView(order_id)
+                except (ValueError, IndexError):
+                    page.go("/patient/orders")
+                    return
             
             # Pharmacist Component Routes
             elif troute == "/pharmacist/prescriptions": content = PharmacistPrescriptionsView()
@@ -140,7 +149,6 @@ def main(page: ft.Page):
             elif troute == "/billing/invoices": content = InvoicesListView()
             elif troute == "/billing/payments": content = PaymentHistoryView()
             elif troute == "/billing/reports" : content = BillingReportsView()
-            elif troute == "/billing/invoices": content = InvoicesDetailView()
             elif troute == "/billing/profile": content = BillingProfileView()
             elif troute.startswith("/billing/invoice/"):
                 inv_id = troute.split("/")[-1]

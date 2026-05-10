@@ -247,7 +247,7 @@ def PrescriptionDetailView(prescription_id):
                 # UI Component: Notes Display Area
                 ft.Container(
                     content=ft.Column([
-                        ft.Row([ft.Icon(ft.Icons.NOTE_ALT, size=20, color="tertiary"), ft.Text("Patient/Doctor Notes", weight="bold")]),
+                        ft.Row([ft.Icon(ft.Icons.NOTE_ALT, size=20, color="tertiary"), ft.Text("Customer/Doctor Notes", weight="bold")]),
                         ft.Text(rx['notes'] or "No additional notes", italic=True),
                     ], spacing=5),
                     bgcolor=ft.Colors.with_opacity(0.05, "tertiary"),
@@ -352,9 +352,9 @@ def PrescriptionDetailView(prescription_id):
                 ft.Container(height=20),
                 
                 # Patient Identity Section
-                ft.Text("Patient Information", size=20, weight="bold"),
+                ft.Text("Customer Information", size=20, weight="bold"),
                 ft.Row([
-                    info_card("Patient Name", rx['patient_name'], ft.Icons.PERSON, "primary"),
+                    info_card("Customer Name", rx['patient_name'], ft.Icons.PERSON, "primary"),
                     info_card("Contact", rx['patient_email'], ft.Icons.EMAIL, "secondary"),
                     info_card("Phone", rx['patient_phone'], ft.Icons.PHONE, "tertiary"),
                 ], spacing=15),

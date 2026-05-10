@@ -123,12 +123,17 @@ def OrdersView():
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 
                 ft.Row([
+                    ft.OutlinedButton(
+                        "View Receipt",
+                        icon=ft.Icons.RECEIPT,
+                        on_click=lambda e: e.page.go(f"/patient/pos_receipt/{order_id}")
+                    ),
                     ft.TextButton(
                         "View Details", 
                         icon=ft.Icons.VISIBILITY,
                         on_click=lambda e: view_order_details(e, order_id)
                     ),
-                ], alignment=ft.MainAxisAlignment.END),
+                ], alignment=ft.MainAxisAlignment.END, spacing=10),
                 
             ], spacing=10),
             padding=20,

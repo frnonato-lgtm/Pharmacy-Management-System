@@ -1,1 +1,4 @@
 flet==0.28.3
+flet-fastapi
+uvicorn
+fastapi

@@ -107,7 +107,7 @@ def ReportsView():
                         ft.Container(
                             content=ft.Row([
                                 ft.Icon(ft.Icons.PEOPLE, color="primary", size=20),
-                                ft.Text(str(role_stat[0]), size=14, weight="bold", expand=1),
+                                ft.Text("Customer" if str(role_stat[0]) == "Patient" else str(role_stat[0]), size=14, weight="bold", expand=1),
                                 ft.Text(f"{role_stat[1]} users", size=14),
                             ], spacing=10),
                             padding=10,
@@ -145,7 +145,7 @@ def ReportsView():
                             content=ft.Row([
                                 ft.Text(str(user[0]), size=12, expand=1),
                                 ft.Text(str(user[1]) if user[1] else "N/A", size=12, expand=2),
-                                ft.Text(str(user[2]), size=12, expand=1),
+                                ft.Text("Customer" if str(user[2]) == "Patient" else str(user[2]), size=12, expand=1),
                                 ft.Text(created_at, size=12, expand=1),
                             ]),
                             padding=10,
@@ -365,7 +365,7 @@ def ReportsView():
                     ft.Container(
                         content=ft.Row([
                             ft.Text("ID", size=12, weight="bold", expand=1),
-                            ft.Text("Patient", size=12, weight="bold", expand=2),
+                            ft.Text("Customer", size=12, weight="bold", expand=2),
                             ft.Text("Status", size=12, weight="bold", expand=1),
                             ft.Text("Date", size=12, weight="bold", expand=1),
                         ]),
@@ -625,7 +625,7 @@ def ReportsView():
                         ft.Container(
                             content=ft.Column([
                                 ft.Row([
-                                    ft.Text(str(role_data[0]), size=14, weight="bold", expand=1),
+                                    ft.Text("Customer" if str(role_data[0]) == "Patient" else str(role_data[0]), size=14, weight="bold", expand=1),
                                     ft.Text(f"{role_data[1]} users ({percentage:.1f}%)", size=14),
                                 ]),
                                 ft.ProgressBar(

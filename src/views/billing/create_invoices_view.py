@@ -21,7 +21,8 @@ def CreateInvoicesView():
     patients = cursor.fetchall()
     
     cursor.execute("""
-        SELECT o.id, o.patient_id, u.full_name, o.total_amount, o.order_date
+        SELECT o.id, o.patient_id, u.full_name, o.total_amount, o.order_date,
+               o.discount_request, o.discount_verified
         FROM orders o
         LEFT JOIN users u ON o.patient_id = u.id
         WHERE o.payment_status = 'Unpaid'
@@ -33,7 +34,7 @@ def CreateInvoicesView():
     
     # Initialize input components
     patient_dropdown = ft.Dropdown(
-        label="Select Patient *",
+        label="Select Customer *",
         options=[ft.dropdown.Option(key=str(p[0]), text=f"{p[1]} ({p[2]})") for p in patients],
         width=300,
         border_color="outline",
@@ -55,6 +56,8 @@ def CreateInvoicesView():
     discount_field = ft.TextField(label="Discount", value="0.00", prefix_text="₱", keyboard_type=ft.KeyboardType.NUMBER, width=200, border_color="outline")
     total_field = ft.TextField(label="Total Amount", value="0.00", prefix_text="₱", read_only=True, width=200, border_color="outline")
     
+    vat_exempt_checkbox = ft.Checkbox(label="VAT Exempt (Senior/PWD)", value=False, on_change=lambda e: calculate_total(e))
+    
     payment_method = ft.Dropdown(
         label="Payment Method",
         options=[ft.dropdown.Option("Cash"), ft.dropdown.Option("Credit Card"), ft.dropdown.Option("Debit Card"), ft.dropdown.Option("Bank Transfer"), ft.dropdown.Option("GCash"), ft.dropdown.Option("PayMaya")],
@@ -70,7 +73,12 @@ def CreateInvoicesView():
         try:
             subtotal = float(subtotal_field.value or 0)
             discount = float(discount_field.value or 0)
-            tax = subtotal * 0.12
+            
+            if vat_exempt_checkbox.value:
+                tax = 0.00
+            else:
+                tax = subtotal * 0.12
+                
             tax_field.value = f"{tax:.2f}"
             total = subtotal + tax - discount
             total_field.value = f"{total:.2f}"
@@ -85,9 +93,32 @@ def CreateInvoicesView():
             order_id = int(order_dropdown.value)
             selected_order = next((o for o in orders if o[0] == order_id), None)
             if selected_order:
-                subtotal_field.value = f"{selected_order[3]:.2f}"
+                # selected_order indices: 0:id, 1:patient_id, 2:name, 3:total, 4:date, 5:disc_req, 6:disc_ver
+                final_amount = float(selected_order[3])
+                is_discounted = selected_order[6] == 1
+                
+                if is_discounted:
+                    # If discounted, the amount in DB is already the 20% off net-of-VAT price
+                    # Net-of-VAT = final_amount / 0.80
+                    net_of_vat = final_amount / 0.80
+                    discount_amount = net_of_vat * 0.20
+                    
+                    subtotal_field.value = f"{net_of_vat:.2f}"
+                    discount_field.value = f"{discount_amount:.2f}"
+                    vat_exempt_checkbox.value = True
+                    tax_field.value = "0.00"
+                    total_field.value = f"{final_amount:.2f}"
+                else:
+                    # Normal order: amount in DB is the VAT-inclusive total
+                    # Subtotal = final_amount / 1.12
+                    subtotal = final_amount / 1.12
+                    subtotal_field.value = f"{subtotal:.2f}"
+                    discount_field.value = "0.00"
+                    vat_exempt_checkbox.value = False
+                    calculate_total(e)
+                
                 patient_dropdown.value = str(selected_order[1])
-                calculate_total(e)
+                e.page.update()
     
     order_dropdown.on_change = on_order_selected
     
@@ -144,7 +175,7 @@ def CreateInvoicesView():
     return ft.Column([
         NavigationHeader(
             "Create Invoice",
-            "Generate invoice for patient billing",
+            "Generate invoice for customer billing",
             show_back=True,
             back_route="/billing/invoices" # Header back button still goes to list
         ),
@@ -152,19 +183,19 @@ def CreateInvoicesView():
         ft.Container(
             content=ft.Column([
                 ft.Container(
-                    content=ft.Row([ft.Icon(ft.Icons.INFO_OUTLINE, color="primary"), ft.Text("Create a new invoice for a patient. You can link it to an existing order or enter manual amounts.", size=13, expand=True)], spacing=10),
+                    content=ft.Row([ft.Icon(ft.Icons.INFO_OUTLINE, color="primary"), ft.Text("Create a new invoice for a customer. You can link it to an existing order or enter manual amounts.", size=13, expand=True)], spacing=10),
                     padding=15, bgcolor=ft.Colors.with_opacity(0.1, "primary"), border_radius=8
                 ),
                 
                 ft.Container(height=20),
                 
-                ft.Text("Patient Information", size=20, weight="bold"),
+                ft.Text("Customer Information", size=20, weight="bold"),
                 ft.Row([patient_dropdown, order_dropdown], spacing=15),
                 
                 ft.Container(height=20),
                 
                 ft.Text("Amount Details", size=20, weight="bold"),
-                ft.Row([subtotal_field, tax_field, discount_field, total_field], spacing=15, wrap=True),
+                ft.Row([subtotal_field, tax_field, discount_field, total_field, vat_exempt_checkbox], spacing=15, wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER),
                 
                 ft.Container(height=20),
                 

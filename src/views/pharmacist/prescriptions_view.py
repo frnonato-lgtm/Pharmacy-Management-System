@@ -30,7 +30,7 @@ def PrescriptionsView():
     
     # Search input configuration
     search_field = ft.TextField(
-        hint_text="Search by patient name or prescription ID...",
+        hint_text="Search by customer name or prescription ID...",
         prefix_icon=ft.Icons.SEARCH,
         border_color="primary",
         expand=True,
@@ -111,7 +111,7 @@ def PrescriptionsView():
                 ft.Row([
                     ft.Column([
                         ft.Text(f"Prescription #{rx['id']}", size=16, weight="bold"),
-                        ft.Text(f"Patient: {rx['patient_name']} (ID: {rx['patient_id']})", 
+                        ft.Text(f"Customer: {rx['patient_name']} (ID: {rx['patient_id']})", 
                                size=13, color="outline"),
                     ], spacing=2, expand=True),
                     ft.Container(
@@ -282,7 +282,7 @@ def PrescriptionsView():
     return ft.Column([
         NavigationHeader(
             "Prescription Management",
-            "Review, approve, or reject patient prescriptions",
+            "Review, approve, or reject customer prescriptions",
             show_back=False,
         ),
         

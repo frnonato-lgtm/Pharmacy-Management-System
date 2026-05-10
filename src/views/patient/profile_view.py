@@ -267,7 +267,7 @@ def ProfileView():
                     txt_name_header,
                     txt_username_header,
                     ft.Container(
-                        content=ft.Text("Patient", size=12, weight="bold", color="onPrimaryContainer"),
+                        content=ft.Text("Customer", size=12, weight="bold", color="onPrimaryContainer"),
                         bgcolor="primaryContainer",
                         padding=ft.padding.symmetric(horizontal=12, vertical=4),
                         border_radius=15,

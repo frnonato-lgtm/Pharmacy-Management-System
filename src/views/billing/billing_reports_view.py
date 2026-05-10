@@ -190,11 +190,11 @@ def BillingReportsView():
             )
             
             # Render top patients table
-            report_container.controls.append(ft.Text("👥 Top 10 Patients by Billing", size=20, weight="bold"))
+            report_container.controls.append(ft.Text("👥 Top 10 Customers by Billing", size=20, weight="bold"))
             
             patient_rows = [
                 ft.Row([
-                    ft.Text("Patient Name", weight="bold", expand=True),
+                    ft.Text("Customer Name", weight="bold", expand=True),
                     ft.Text("Invoices", weight="bold", width=100),
                     ft.Text("Total Spent", weight="bold", width=150),
                 ]),
@@ -211,7 +211,7 @@ def BillingReportsView():
                         ])
                     )
             else:
-                patient_rows.append(ft.Text("No patient data available.", italic=True))
+                patient_rows.append(ft.Text("No customer data available.", italic=True))
                 
             report_container.controls.append(
                 ft.Container(

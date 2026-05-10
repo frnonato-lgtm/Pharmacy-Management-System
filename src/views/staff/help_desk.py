@@ -81,11 +81,11 @@ def HelpDeskView():
                 ft.Text("Quick Guides", size=20, weight="bold"),
                 ft.Row([
                     create_guide_card("How to Search", [
-                        "Click 'Find Patient' on sidebar",
+                        "Click 'Find Customer' on sidebar",
                         "Type name/phone",
                         "Click Search button"
                     ]),
-                    create_guide_card("Patient Records", [
+                    create_guide_card("Customer Records", [
                         "You have Read-Only access",
                         "Cannot edit details",
                         "Report errors to Admin"
@@ -102,7 +102,7 @@ def HelpDeskView():
                 # 2. FAQs Section
                 ft.Text("Frequently Asked Questions", size=20, weight="bold"),
                 ft.Column([
-                    create_faq("Can I edit patient info?", "No. Staff access is read-only. Contact an Admin to make changes."),
+                    create_faq("Can I edit customer info?", "No. Staff access is read-only. Contact an Admin to make changes."),
                     create_faq("How do I report a bug?", "Take a screenshot and email IT Support immediately."),
                     create_faq("System is slow?", "Try refreshing the page by going on dashboard."),
                     create_faq("Forgot Password?", "Ask the System Admin to reset your credentials or go to My profile in you dashboard."),

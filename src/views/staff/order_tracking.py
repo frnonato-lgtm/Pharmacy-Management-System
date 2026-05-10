@@ -14,8 +14,9 @@ def StaffOrderTracking():
         return ft.Text("Please log in first", color="error")
     
     # Role-based access control: ONLY Staff can access
-    if user['role'] != "Staff":
-        return ft.Text("⛔ Unauthorized - Order Tracking is Staff Only", color="error", size=16, weight="bold")
+    # Role-based access control: Allow Staff, Pharmacist, and Billing
+    if user['role'] not in ["Staff", "Pharmacist", "Billing"]:
+        return ft.Text("⛔ Unauthorized - This section is restricted to Staff, Pharmacist, or Billing roles", color="error", size=16, weight="bold")
     
     staff_id = user['id']
     staff_name = user['full_name']
@@ -40,7 +41,8 @@ def StaffOrderTracking():
         cursor = conn.cursor()
         sql = """
             SELECT o.id, o.patient_id, u.full_name, u.phone, o.status, 
-                   o.total_amount, o.order_date, COALESCE(o.updated_at, o.order_date), o.pharmacy_notes
+                   o.total_amount, o.order_date, COALESCE(o.updated_at, o.order_date), o.pharmacy_notes,
+                   o.discount_request, o.discount_verified
             FROM orders o
             JOIN users u ON o.patient_id = u.id
             WHERE 1=1
@@ -86,6 +88,7 @@ def StaffOrderTracking():
     def create_order_card(order):
         order_id, patient_id, patient_name, phone = order[0:4]
         status, total, created_at, updated_at, pharmacy_notes = order[4:9]
+        discount_request, discount_verified = order[9], order[10]
         items = get_order_items(order_id)
         color = {'Pending': 'orange', 'Processing': 'blue', 'Ready': 'teal', 'Completed': 'green', 'Cancelled': 'red'}.get(status, 'grey')
         
@@ -129,6 +132,18 @@ def StaffOrderTracking():
             conn.commit()
             conn.close()
             refresh_orders()
+            
+        def verify_discount(e):
+            # Calculate new total (remove 12% tax, apply 20% discount)
+            subtotal = total / 1.12
+            new_total = subtotal * 0.80
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("UPDATE orders SET discount_verified = 1, total_amount = ? WHERE id = ?", (new_total, order_id))
+            conn.commit()
+            conn.close()
+            refresh_orders()
         
         # Disable status buttons if order is Completed or Cancelled
         is_locked = status in ["Completed", "Cancelled"]
@@ -148,6 +163,15 @@ def StaffOrderTracking():
                         *(([ft.Text("🔒 LOCKED", size=10, weight="bold", color="red")]) if is_locked else []),
                     ], spacing=10, alignment=ft.MainAxisAlignment.CENTER),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                
+                # Discount section if requested
+                *([ft.Row([
+                    ft.Icon(ft.Icons.DISCOUNT, size=16, color="green" if discount_verified == 1 else "orange"),
+                    ft.Text(f"Discount Requested: {discount_request}", weight="bold", color="green" if discount_verified == 1 else "orange"),
+                    ft.Text("(Verified)" if discount_verified == 1 else "(Pending Verification)", size=12, color="green" if discount_verified == 1 else "orange", italic=True),
+                    *([ft.ElevatedButton("Verify Discount", icon=ft.Icons.VERIFIED, on_click=verify_discount, bgcolor="green", color="white", height=30, style=ft.ButtonStyle(padding=5))] if discount_verified == 0 and not is_locked else [])
+                ], spacing=8)] if discount_request and discount_request != "None" else []),
+                
                 ft.Divider(),
                 
                 # Date info

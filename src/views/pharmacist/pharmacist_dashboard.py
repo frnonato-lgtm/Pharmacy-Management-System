@@ -143,7 +143,7 @@ def PharmacistDashboard():
             content=ft.Row([
                 ft.Column([
                     ft.Text(f"Prescription #{rx[0]}", weight="bold", size=14),
-                    ft.Text(f"Patient: {rx[3]}", size=12, color="outline"),
+                    ft.Text(f"Customer: {rx[3]}", size=12, color="outline"),
                     ft.Text(f"Medicine: {rx[4]}", size=12),
                     ft.Text(f"Submitted: {time_ago(rx[1])}", size=11, color="outline", italic=True),
                 ], spacing=3, expand=True),
@@ -305,7 +305,7 @@ def PharmacistDashboard():
                 "This shift"
             ),
             create_stat_card(
-                "Total Patients",
+                "Total Customers",
                 total_patients,
                 ft.Icons.PEOPLE,
                 "secondary",
@@ -342,6 +342,12 @@ def PharmacistDashboard():
                         ft.Icons.ANALYTICS,
                         "/pharmacist/reports",
                         "tertiary",
+                    ),
+                    create_action_button(
+                        "Verify Orders",
+                        ft.Icons.VERIFIED,
+                        "/staff/orders",
+                        "primary",
                     ),
                 ], spacing=15, wrap=True),
             ], spacing=15),

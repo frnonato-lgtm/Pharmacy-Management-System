@@ -19,6 +19,20 @@ def CartView():
     cart_container = ft.Column(spacing=10)
     summary_container = ft.Container()
     
+    # Discount request dropdown
+    discount_dropdown = ft.Dropdown(
+        label="Discount Request (Subject to Verification)",
+        options=[
+            ft.dropdown.Option("None"),
+            ft.dropdown.Option("Senior Citizen"),
+            ft.dropdown.Option("PWD"),
+        ],
+        value="None",
+        width=300,
+        text_size=14,
+        content_padding=10
+    )
+    
     # Retrieve cart contents
     def load_cart():
         conn = get_db_connection()
@@ -227,11 +241,11 @@ def CartView():
             tax = subtotal * 0.12
             total = subtotal + tax
 
-            # Insert order record
+            # Insert order record with discount request
             cursor.execute("""
-                INSERT INTO orders (patient_id, total_amount, status, payment_status)
-                VALUES (?, ?, 'Pending', 'Unpaid')
-            """, (user_id, total))
+                INSERT INTO orders (patient_id, total_amount, status, payment_status, discount_request)
+                VALUES (?, ?, 'Pending', 'Unpaid', ?)
+            """, (user_id, total, discount_dropdown.value))
 
             order_id = cursor.lastrowid
 
@@ -302,8 +316,8 @@ def CartView():
             show_success(e.page, ORDER_PLACED.format(order_id))
             refresh_cart(e)
 
-            # Navigate to order history
-            e.page.go("/patient/orders")
+            # Navigate to POS Receipt
+            e.page.go(f"/patient/pos_receipt/{order_id}")
 
         except Exception as ex:
             conn.rollback()
@@ -343,6 +357,10 @@ def CartView():
                     ft.Text("Total:", size=18, weight="bold"),
                     ft.Text(f"₱ {total:.2f}", size=20, weight="bold", color="primary"),
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Container(height=10),
+                
+                # Discount dropdown
+                discount_dropdown,
                 ft.Container(height=10),
                 
                 # Render centered actions
@@ -431,6 +449,10 @@ def CartView():
             ft.Text("Total:", size=18, weight="bold"),
             ft.Text(f"₱ {total:.2f}", size=20, weight="bold", color="primary"),
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        ft.Container(height=10),
+        
+        # Discount dropdown
+        discount_dropdown,
         ft.Container(height=10),
         
         # Navigation controls

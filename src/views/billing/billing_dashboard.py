@@ -116,7 +116,7 @@ def BillingDashboard():
             content=ft.Row([
                 ft.Column([
                     ft.Text(f"Invoice #{inv[1]}", weight="bold", size=14),
-                    ft.Text(f"Patient: {inv[5]}", size=12, color="outline"),
+                    ft.Text(f"Customer: {inv[5]}", size=12, color="outline"),
                     ft.Text(f"Amount: ₱{inv[2]:,.2f}", size=13, weight="bold", color="primary"),
                     ft.Text(f"Date: {inv[4]}", size=11, color="outline", italic=True),
                 ], spacing=3, expand=True),
@@ -172,6 +172,7 @@ def BillingDashboard():
                             create_action_button("View All Invoices", ft.Icons.RECEIPT_LONG, "/billing/invoices", "secondary"),
                             create_action_button("Payment History", ft.Icons.HISTORY, "/billing/payments", "tertiary"),
                             create_action_button("Generate Report", ft.Icons.ANALYTICS, "/billing/reports", "primary"),
+                            create_action_button("Verify Orders", ft.Icons.VERIFIED, "/staff/orders", "secondary"),
                         ], spacing=15, wrap=True),
                     ], spacing=15),
                     padding=20, bgcolor="surface", border_radius=10, border=ft.border.all(1, "outlineVariant"),

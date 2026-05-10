@@ -22,7 +22,7 @@ def UserManagement():
         label="Filter by Role",
         options=[
             ft.dropdown.Option("All"),
-            ft.dropdown.Option("Patient"),
+            ft.dropdown.Option("Patient", text="Customer"),
             ft.dropdown.Option("Pharmacist"),
             ft.dropdown.Option("Inventory"),
             ft.dropdown.Option("Billing"),
@@ -174,7 +174,7 @@ def UserManagement():
             role_field = ft.Dropdown(
                 label="Role",
                 options=[
-                    ft.dropdown.Option("Patient"),
+                    ft.dropdown.Option("Patient", text="Customer"),
                     ft.dropdown.Option("Pharmacist"),
                     ft.dropdown.Option("Inventory"),
                     ft.dropdown.Option("Billing"),
@@ -323,7 +323,7 @@ def UserManagement():
                 ft.Text(user['username'], size=13, expand=1),
                 ft.Text(user['full_name'] or "N/A", size=13, expand=2),
                 ft.Container(
-                    content=ft.Text(user['role'], size=11, weight="bold", color="onPrimaryContainer"),
+                    content=ft.Text("Customer" if user['role'] == "Patient" else user['role'], size=11, weight="bold", color="onPrimaryContainer"),
                     bgcolor="primaryContainer",
                     padding=ft.padding.symmetric(horizontal=8, vertical=4),
                     border_radius=5,
@@ -356,7 +356,7 @@ def UserManagement():
         role_field = ft.Dropdown(
             label="Role *",
             options=[
-                ft.dropdown.Option("Patient"),
+                ft.dropdown.Option("Patient", text="Customer"),
                 ft.dropdown.Option("Pharmacist"),
                 ft.dropdown.Option("Inventory"),
                 ft.dropdown.Option("Billing"),

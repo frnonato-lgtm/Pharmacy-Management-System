@@ -64,7 +64,7 @@ def SystemLogs():
             logs.append({
                 "timestamp": user[4],
                 "user": user[1],
-                "action": f"New {user[3]} Registered",
+                "action": f"New {'Customer' if user[3] == 'Patient' else user[3]} Registered",
                 "details": f"User '{user[2] or user[1]}' created account",
                 "type": "users",
                 "icon": ft.Icons.PERSON_ADD,

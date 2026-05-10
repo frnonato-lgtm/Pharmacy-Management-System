@@ -55,7 +55,7 @@ def LandingPage(page: ft.Page):
         focused_border_color="primary",
         content_padding=10,
         options=[
-            ft.dropdown.Option("Patient"),
+            ft.dropdown.Option("Patient", text="Customer"),
             ft.dropdown.Option("Admin", text="Administrator"),
             ft.dropdown.Option("Pharmacist"),
             ft.dropdown.Option("Inventory", text="Inventory Manager"),
@@ -82,7 +82,7 @@ def LandingPage(page: ft.Page):
         focused_border_color="primary",
         content_padding=10,
         options=[
-            ft.dropdown.Option("Patient"),
+            ft.dropdown.Option("Patient", text="Customer"),
             ft.dropdown.Option("Staff", text="Staff Member"),
             ft.dropdown.Option("Pharmacist"),
             ft.dropdown.Option("Inventory", text="Inventory Manager"),

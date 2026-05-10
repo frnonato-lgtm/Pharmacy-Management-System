@@ -25,6 +25,7 @@ class AppLayout(ft.Row):
         user = AppState.get_user()
         user_name = user['full_name'] if user else "Guest"
         user_role = user['role'] if user else "Unknown"
+        display_role = "Customer" if user_role == "Patient" else user_role
 
         # Configure navigational rail view
         self.rail = ft.NavigationRail(
@@ -84,7 +85,7 @@ class AppLayout(ft.Row):
                     # Session identification component
                     ft.Column([
                         ft.Text(f"{user_name}", size=16, weight="bold"),
-                        ft.Text(f"{user_role}", size=12, color="outline"),
+                        ft.Text(f"{display_role}", size=12, color="outline"),
                     ], spacing=2, expand=True),
                     # Render general purpose actions
                     ft.Row([
@@ -171,12 +172,14 @@ class AppLayout(ft.Row):
             
         elif role == "Pharmacist":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.MEDICAL_SERVICES, label="Prescriptions"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.VERIFIED, label="Verify Orders"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         elif role == "Inventory":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.INVENTORY, label="Manage Stock"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         elif role == "Billing":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.RECEIPT_LONG, label="Invoices"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.VERIFIED, label="Verify Orders"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         elif role == "Admin":
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="Users"))
@@ -184,8 +187,9 @@ class AppLayout(ft.Row):
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.HISTORY, label="Logs"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.INVENTORY, label="Manage Stock"))
         elif role == "Staff":
-            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON_SEARCH, label="Find Patient"))
-            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="All Patients"))  
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON_SEARCH, label="Find Customer"))
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.PEOPLE, label="All Customers"))  
+            dests.append(ft.NavigationRailDestination(icon=ft.Icons.VERIFIED, label="Verify Orders"))
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.HELP, label="Help Desk"))  
             dests.append(ft.NavigationRailDestination(icon=ft.Icons.PERSON, label="My Profile"))
         
@@ -255,8 +259,9 @@ class AppLayout(ft.Row):
         elif label == "Prescriptions": self.page.go("/pharmacist/prescriptions")
         elif label == "Manage Stock": self.page.go("/inventory/stock")
         elif label == "Invoices": self.page.go("/billing/invoices")
-        elif label == "Find Patient": self.page.go("/staff/search")
-        elif label == "All Patients": self.page.go("/staff/patients")
+        elif label == "Find Customer": self.page.go("/staff/search")
+        elif label == "All Customers": self.page.go("/staff/patients")
+        elif label == "Verify Orders": self.page.go("/staff/orders")
         elif label == "Help Desk": self.page.go("/staff/help")
         # System administrative views
         elif label == "Users": self.page.go("/admin/users")

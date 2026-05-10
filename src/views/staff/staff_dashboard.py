@@ -106,7 +106,7 @@ def StaffDashboard():
         # Dashboard Header (No back button because this is the home page)
         NavigationHeader(
             f"Welcome, {user_name}",
-            "Staff Portal - Assist with patient records and inquiries",
+            "Staff Portal - Assist with customer records and inquiries",
             show_back=False,
         ),
         
@@ -117,7 +117,7 @@ def StaffDashboard():
                 
                 # 1. The Stats Row (The 3 boxes)
                 ft.Row([
-                    create_stat_card("Total Patients", total_patients, ft.Icons.GROUPS, "primary"),
+                    create_stat_card("Total Customers", total_patients, ft.Icons.GROUPS, "primary"),
                     create_stat_card("New Today", new_today, ft.Icons.PERSON_ADD, "secondary"),
                     create_stat_card("Active Rx", active_prescriptions, ft.Icons.MEDICATION, "tertiary"),
                 ], spacing=15),
@@ -131,8 +131,8 @@ def StaffDashboard():
                         content=ft.Column([
                             ft.Text("Quick Actions", size=18, weight="bold"),
                             create_action_button("📦 Order Tracking", ft.Icons.LOCAL_SHIPPING, "/staff/orders", "tertiary"),
-                            create_action_button("Search Patients", ft.Icons.SEARCH, "/staff/search", "primary"),
-                            create_action_button("View All Patients", ft.Icons.LIST, "/staff/patients", "secondary"),
+                            create_action_button("Search Customers", ft.Icons.SEARCH, "/staff/search", "primary"),
+                            create_action_button("View All Customers", ft.Icons.LIST, "/staff/patients", "secondary"),
                             create_action_button("Help Desk", ft.Icons.HELP, "/staff/help", "tertiary"),
                             
                             ft.Container(height=20),
@@ -143,7 +143,7 @@ def StaffDashboard():
                                     ft.Text("Recent Registrations", size=16, weight="bold"),
                                     ft.Divider(),
                                     # Comprehension-based list rendering
-                                    *([create_patient_item(p) for p in recent_patients] if recent_patients else [ft.Text("No new patients today", italic=True)]),
+                                    *([create_patient_item(p) for p in recent_patients] if recent_patients else [ft.Text("No new customers today", italic=True)]),
                                 ], spacing=10),
                                 padding=20,
                                 bgcolor="surface",
@@ -161,7 +161,7 @@ def StaffDashboard():
                             ft.Container(
                                 content=ft.Column([
                                     ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE, size=16, color="primary"), ft.Text("Verify ID before sharing info", size=13)], spacing=10),
-                                    ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE, size=16, color="primary"), ft.Text("Keep patient data confidential", size=13)], spacing=10),
+                                    ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE, size=16, color="primary"), ft.Text("Keep customer data confidential", size=13)], spacing=10),
                                     ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE, size=16, color="primary"), ft.Text("Report errors to Admin", size=13)], spacing=10),
                                     ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE, size=16, color="primary"), ft.Text("Be polite and professional", size=13)], spacing=10),
                                 ], spacing=15),
@@ -177,7 +177,7 @@ def StaffDashboard():
                             ft.Container(
                                 content=ft.Row([
                                     ft.Icon(ft.Icons.LOCK, color="tertiary"),
-                                    ft.Text("You have Read-Only access to patients.", size=12, expand=True)
+                                    ft.Text("You have Read-Only access to customers.", size=12, expand=True)
                                 ], spacing=10),
                                 padding=15,
                                 bgcolor=ft.Colors.with_opacity(0.1, "tertiary"),
